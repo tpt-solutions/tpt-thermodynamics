@@ -1,0 +1,160 @@
+# tpt-thermodynamics Specification
+
+## 1. Purpose
+A rigorous, pure-Rust computational thermodynamics workspace. While `tpt-eng-props` provides fixed lookup tables for pure substances (water, air, fuels), this workspace calculates multi-component mixture properties, phase equilibria, and advanced Equations of State (EoS) from first principles. It is the thermodynamic backbone for process simulation, materials science, energy systems, and geoscience applications. All implementations are from scratch in pure Rust with no external thermodynamic library dependencies, ensuring full control over numerical methods, complete auditability for regulatory compliance, and WASM compatibility for browser-based process simulators.
+
+## 2. Scope & Boundaries
+- IN SCOPE: Cubic Equations of State (Peng-Robinson, Soave-Redlich-Kwong, volume-translated variants), advanced EoS (PC-SAFT, SAFT-VR Mie, electrolyte SAFT), activity coefficient models (NRTL, UNIQUAC, UNIFAC, Wilson), Vapor-Liquid Equilibrium (VLE), Liquid-Liquid Equilibrium (LLE), Vapor-Liquid-Liquid Equilibrium (VLLE), flash calculations (PT, PH, TV, TS, PU, PV), phase stability testing (Tangent Plane Distance), bubble/dew point calculations, mixture transport properties (viscosity, thermal conductivity, diffusivity), electrolyte thermodynamics (Pitzer, eNRTL, HKF), and polymer thermodynamics (Flory-Huggins, Sanchez-Lacombe).
+- OUT OF SCOPE: Quantum chemistry calculations (delegated to `tpt-sci-dft`), molecular dynamics simulation (delegated to `tpt-sci-md`), reaction kinetics and reactor modeling (delegated to `tpt-sci-kinetics`), or pure-component property lookup tables (delegated to `tpt-eng-props`).
+- DEPENDS ON: `tpt-math-numeric`, `tpt-math-optimize-general`, `tpt-math-optimize-convex`, `tpt-math-linalg`, `tpt-math-units`, `tpt-eng-props` (for pure-component reference states and critical properties).
+
+## 3. Crate Inventory
+
+### Core Infrastructure
+
+#### `tpt-thermo-core`
+The foundation layer defining the canonical representation of thermodynamic systems and the EoS interface contract. Provides strongly-typed composition representations (`MoleFraction`, `MassFraction`, `Molality`) with automatic normalization and conversion utilities. Defines the `EquationOfState` trait with methods for pressure, fugacity coefficient, chemical potential, enthalpy, entropy, heat capacity, speed of sound, and all first/second derivatives required for phase equilibrium calculations. Includes mixture aggregation functions using classical mixing rules (van der Waals one-fluid), Huron-Vidal mixing rules (coupling EoS with excess Gibbs energy models), and Wong-Sandler mixing rules (thermodynamically consistent at both low and high pressure). Provides component database traits for accessing pure-component parameters (critical temperature, critical pressure, acentric factor, molar mass, dipole moment, association parameters) with unit-safe accessors. All core types are `no_std` compatible with optional `alloc` support for dynamic composition vectors.
+
+### Equations of State
+
+#### `tpt-thermo-eos-cubic`
+Cubic Equation of State implementations for hydrocarbon and chemical process applications. Includes Peng-Robinson (PR) original and modified variants, Soave-Redlich-Kwong (SRK), and volume-translated PR (Peneloux correction for improved liquid density prediction). Implements classical van der Waals one-fluid mixing rules with binary interaction parameters (BIPs) that can be temperature-dependent (k_ij = a + b/T + c*ln(T)). Includes Huron-Vidal mixing rules (MHV1, MHV2, PSRK) that couple cubic EoS with activity coefficient models for improved VLE prediction in polar/nonpolar mixtures. Provides Wong-Sandler mixing rules that are thermodynamically consistent at both zero and infinite pressure. Supports cubic root solving with analytical solutions (Cardano's method) and robust selection of the physically meaningful root based on stability criteria. Includes critical point detection, spinodal curve calculation, and mechanical stability analysis. All EoS implementations are generic over the alpha function (Soave, Twu, Mathias-Copeman) for flexible temperature dependence of the attractive parameter.
+
+#### `tpt-thermo-eos-saft`
+Statistical Associating Fluid Theory (SAFT) implementations for complex fluids including polymers, associating compounds (water, alcohols, acids), and chain molecules. Includes PC-SAFT (Perturbed Chain SAFT) with segment number (m), segment diameter (σ), and dispersion energy (ε/k) parameters, plus association schemes (1-site, 2-site, 3-site, 4-site) for hydrogen bonding. Implements SAFT-VR Mie (Variable Range Mie) with Mie potential exponents for improved accuracy in phase equilibria prediction. Provides electrolyte SAFT (eSAFT) extensions for ionic liquids and salt solutions with ion-ion, ion-solvent, and ion-segment interaction parameters. Includes association solver using Newton-Raphson with analytical Jacobian for rapid convergence of association site fractions. Supports cross-association (e.g., water-alcohol mixtures) and solvation effects. Provides parameter estimation utilities for fitting SAFT parameters to pure-component and binary mixture data. All SAFT variants include full derivative calculations (∂P/∂V, ∂P/∂T, ∂²P/∂V², etc.) required for phase equilibrium and stability analysis.
+
+#### `tpt-thermo-eos-activity`
+Activity coefficient models for liquid-phase non-ideality, essential for VLE and LLE calculations at low to moderate pressures. Implements NRTL (Non-Random Two-Liquid) with three adjustable parameters per binary pair (τ_12, τ_21, α_12) and support for multi-component systems using the local composition concept. Includes UNIQUAC (Universal Quasi-Chemical) with structural parameters (r, q) from van der Waals volumes and surface areas, plus energy interaction parameters. Provides UNIFAC (Universal Functional) group contribution method for predictive calculations without experimental data, with original UNIFAC and modified UNIFAC (Dortmund) parameter sets for thousands of functional groups. Implements Wilson equation for completely miscible systems with two temperature-dependent parameters per binary. Includes electrolyte extensions: eNRTL for mixed solvent-electrolyte systems with long-range (Pitzer-Debye-Hückel) and short-range (NRTL) contributions, and Pitzer model for brines and geothermal fluids with virial coefficients for ion-ion interactions. All activity models include proper limiting law behavior at infinite dilution and support temperature-dependent parameters (A + B/T + C*ln(T)).
+
+### Phase Equilibrium
+
+#### `tpt-thermo-flash`
+Robust flash calculation solvers for determining phase splits at specified conditions. Implements PT (pressure-temperature), PH (pressure-enthalpy), TV (temperature-volume), TS (temperature-entropy), PU (pressure-internal energy), and PV (pressure-volume) flash calculations for vapor-liquid systems. Uses successive substitution (Rachford-Rice equation) for initial convergence with K-value updates from fugacity coefficients, then switches to Newton-Raphson with full Jacobian for quadratic convergence near the solution. Handles challenging regions: near-critical points using density-based formulations instead of composition-based to avoid singularities; retrograde condensation by tracking multiple roots in cubic EoS; trace components using logarithmic variables (ln K_i) to prevent underflow. Includes liquid-liquid flash (LLE) using the isoactivity criterion, and vapor-liquid-liquid flash (VLL) using nested loops with stability analysis to detect third-phase formation. Provides convergence acceleration techniques: dominant eigenvalue method, volume substitution, and GDEM (Generalized Dominant Eigenvalue Method). All flash solvers return a `ConvergenceStatus` enum indicating success, failure, or max iterations reached, along with the final residual norm and iteration count. Includes automatic initialization using Wilson equation K-values or UNIFAC activity coefficients for improved convergence.
+
+#### `tpt-thermo-phase`
+Phase stability testing and multiphase equilibrium calculation. Implements Tangent Plane Distance (TPD) minimization to determine whether a mixture at specified conditions is stable (single phase), unstable (will split into multiple phases), or at the stability limit. Uses the Michelsen method with successive substitution for TPD minimization, followed by Newton-Raphson for precise convergence. Includes multiple trial composition initialization strategies: light component rich, heavy component rich, and intermediate compositions to detect all possible phase splits. Provides multiphase equilibrium calculation (V-L-L, V-L-L-L, L-L-L) using the nested loop approach with phase identification and elimination. Supports solid-liquid equilibrium (SLE) for crystallization modeling with temperature-dependent solubility. Includes critical point calculation for mixtures using the critical criteria (∂²G/∂x² = 0, ∂³G/∂x³ = 0) and continuation methods for tracing critical loci. Provides phase boundary calculation (bubble point, dew point, liquid-liquid boundary) as a function of composition, pressure, or temperature using arc-length continuation. All stability tests return a `StabilityResult` with phase count, phase compositions, and stability status.
+
+#### `tpt-thermo-bubble-dew`
+Bubble point and dew point calculations for multi-component mixtures at specified pressure or temperature. Implements bubble point calculation (find temperature at specified pressure and liquid composition, or find pressure at specified temperature and liquid composition) using Newton-Raphson with the bubble point criterion Σ y_i = Σ K_i * x_i = 1. Includes dew point calculation using the dew point criterion Σ x_i = Σ y_i / K_i = 1. Provides continuation methods to trace the complete bubble and dew curves as a function of composition or pressure, enabling construction of complete phase envelopes (P-T, P-x-y, T-x-y diagrams). Includes azeotrope detection where bubble and dew curves intersect (x_i = y_i for all components). Supports reactive distillation calculations where chemical equilibrium is coupled with phase equilibrium. Provides cricondenbar and cricondentherm detection for retrograde condensation analysis. All calculations include proper handling of near-critical regions and provide convergence diagnostics.
+
+### Transport Properties
+
+#### `tpt-thermo-transport`
+Mixture transport property estimation for process design and heat/mass transfer calculations. Implements viscosity estimation using Chung et al. method for polar and nonpolar gases, Lucas method for dense gases and liquids, and corresponding states correlation based on acentric factor. Includes thermal conductivity estimation using Chung et al. method for gases, Ely-Hanley method for liquids, and corresponding states correlation. Provides diffusion coefficient estimation using Fuller-Schettler-Giddings correlation for gas-phase binary diffusion, Darken equation for liquid-phase diffusion in ideal mixtures, and Vignes correlation for composition-dependent diffusion. Includes mixture averaging rules: Wilke method for gas viscosity, Mason-Saxena modification for polar gases, Filippov method for liquid thermal conductivity, and Darken method for liquid diffusivity. Supports residual entropy scaling for dense fluids where traditional correlations break down. All transport properties are unit-safe using `tpt-math-units` and include uncertainty estimates where available. Provides temperature and pressure dependence with proper limiting behavior at ideal gas and incompressible liquid limits.
+
+### Electrolytes & Special Systems
+
+#### `tpt-thermo-electrolyte`
+Electrolyte thermodynamics for brines, geothermal fluids, and chemical process applications involving ionic species. Implements Pitzer model with second and third virial coefficients (β⁰, β¹, β², C_φ) for accurate activity and osmotic coefficients in concentrated electrolyte solutions up to 6 molal. Includes mixed-electrolyte parameters (θ for cation-cation or anion-anion interactions, ψ for ternary interactions) for multi-component electrolyte systems. Provides eNRTL (electrolyte NRTL) model combining long-range electrostatic contributions (Pitzer-Debye-Hückel) with short-range local composition contributions (NRTL) for mixed solvent-electrolyte systems. Implements HKF (Helgeson-Kirkham-Flowers) model for high-temperature/high-pressure aqueous solutions (up to 1000°C, 5 kbar) with revised parameters for standard partial molal properties. Includes ion association calculations using the Bjerrum criterion and mass action law for ion pair formation. Supports gas solubility in electrolyte solutions using the Setschenow equation and salting-out parameters. Provides complete derivative calculations for integration with phase equilibrium and reactive systems. All electrolyte models include proper limiting law behavior at infinite dilution (Debye-Hückel limiting law) and support temperature-dependent parameters.
+
+#### `tpt-thermo-polymer`
+Polymer thermodynamics for polymer blending, solution, and processing applications. Implements Flory-Huggins lattice theory with combinatorial entropy of mixing for polymers of different chain lengths and interaction parameter χ for enthalpy of mixing. Includes Sanchez-Lacombe lattice fluid model with equation of state for polymer melts and solutions, supporting pressure-volume-temperature (PVT) predictions. Provides PC-SAFT for polymers with chain length parameter (m) approaching infinity limit, including copolymer and blend calculations. Implements cloud point calculation for polymer solutions and blends using phase stability analysis, supporting both UCST (upper critical solution temperature) and LCST (lower critical solution temperature) behavior. Includes molecular weight distribution effects using discrete or continuous distributions (Schulz-Zimm, most probable). Provides polymer-solvent interaction parameter estimation from experimental data (VLE, LLE, osmotic pressure). Supports crystallization modeling with melting point depression calculations using the Flory equation. All polymer models include proper chain length dependence and support both amorphous and semi-crystalline polymers.
+
+### Data & Parameters
+
+#### `tpt-thermo-data`
+Comprehensive component property database with traceable provenance for all thermodynamic parameters. Includes pure-component parameters for over 2000 compounds: critical properties (Tc, Pc, ω), molar mass, normal boiling point, acentric factor, dipole moment, radius of gyration, association parameters (ε_AB, κ_AB, number of association sites), and SAFT segment parameters (m, σ, ε/k). All data sourced from authoritative references: DIPPR Project 86 for pure-component properties, NIST TRC Thermodynamics Research Center for hydrocarbons, DECHEMA VLE Data Collection for binary interaction parameters, and peer-reviewed literature for specialized parameters. Includes binary interaction parameters (BIPs) for cubic EoS (k_ij for PR, SRK), NRTL, UNIQUAC, and UNIFAC group interaction parameters (A_ij, B_ij, C_ij). Provides parameter uncertainty estimates where available and literature references for each parameter value. Supports user-supplied parameter files in TOML or JSON format for custom components not in the database, with validation against physical constraints (e.g., positive critical temperature, reasonable acentric factor range). Includes parameter estimation utilities for fitting EoS parameters to experimental VLE, density, or enthalpy data using least-squares optimization with `tpt-math-optimize`. Provides data versioning and change tracking for reproducibility and auditability. All data access is unit-safe and includes provenance metadata (source, reference, uncertainty, date of last validation).
+
+### Umbrella
+
+#### `tpt-thermo`
+Feature-gated umbrella crate that re-exports all thermodynamic models and utilities. Each model category is an optional Cargo feature (e.g., `features = ["cubic", "saft", "flash", "electrolyte"]`), allowing downstream users to pull in only the capabilities they need. Compiling without any features yields a minimal crate that only re-exports `tpt-thermo-core` and `tpt-thermo-data`. The feature tree is flat to avoid Cargo feature unification surprises. Provides convenience constructors and builder patterns for common workflows (e.g., `FlashCalculator::new(eos).with_initialization(InitializationMethod::Wilson)`). Includes a unified `ThermoError` type that wraps model-specific errors with context about which calculation failed and why. Provides format conversion utilities between different composition representations (mole fraction ↔ mass fraction ↔ molality) and between different EoS formulations. Includes high-level API functions for common calculations (e.g., `bubble_point(pressure, composition, eos)`, `flash_pt(pressure, temperature, composition, eos)`) that automatically select appropriate initialization and convergence strategies.
+
+## 4. Design Principles
+
+### Numerical Robustness
+Flash calculations and phase stability tests must gracefully handle challenging regions without panicking or producing incorrect results:
+- **Near-critical regions**: Use density-based formulations instead of composition-based to avoid singularities in the Jacobian. Switch to specialized algorithms (e.g., Heidemann-Rahal critical point detection) when approaching critical conditions.
+- **Retrograde condensation**: Detect and handle multiple roots in cubic EoS by tracking the physically meaningful root using stability criteria (minimum Gibbs energy).
+- **Trace components**: Use logarithmic variables (ln K_i, ln x_i) to prevent underflow when component mole fractions approach zero (< 1e-15).
+- **Convergence failure**: If Newton-Raphson diverges after N iterations (default N=50), fall back to bounded optimization (Brent's method) or successive substitution with damping (ω = 0.5). If all methods fail, return a structured error with diagnostic information (residual norm, iteration count, last successful step).
+
+All solvers must return a `ConvergenceStatus` enum:
+```rust
+pub enum ConvergenceStatus {
+    Converged { iterations: usize, residual: f64 },
+    MaxIterations { iterations: usize, residual: f64 },
+    Diverged { iterations: usize, residual: f64, reason: DivergenceReason },
+    NumericalIssue { condition_number: f64, reason: NumericalIssueReason },
+}
+
+Unit Safety
+All inputs and outputs must be strictly typed using tpt-math-units to prevent unit mismatches at compile time:
+
+pub fn flash_pt<P: Into<Pressure>, T: Into<Temperature>>(
+    pressure: P,
+    temperature: T,
+    composition: &[MoleFraction],
+    eos: &dyn EquationOfState,
+) -> Result<FlashResult, ThermoError>;
+
+This prevents common errors like passing °C instead of K, or Pa instead of bar. All internal calculations convert to SI base units (Pa, K, mol/m³) for consistency, then convert back to the requested output units.
+Data Provenance
+All binary interaction parameters (BIPs) and pure-component constants must be traceable to a source for regulatory compliance and reproducibility:
+
+pub struct BipParameter {
+    pub value: f64,
+    pub source: ParameterSource,  // Dippr, Nist, Decchema, UserSupplied, Literature
+    pub reference: String,        // e.g., "DIPPR Project 86, Table 1.2, p. 45"
+    pub uncertainty: Option<f64>, // Optional uncertainty estimate (95% confidence)
+    pub date_validated: Option<chrono::Date>,  // When this parameter was last validated
+}
+
+This is critical for industries like pharmaceuticals, energy, and chemicals where thermodynamic calculations must be auditable and reproducible.
+Extensibility
+Users must be able to define custom components and EoS without modifying the crate:
+
+pub trait EquationOfState {
+    fn pressure(&self, temperature: Temperature, molar_volume: MolarVolume, composition: &[MoleFraction]) -> Pressure;
+    fn fugacity_coefficient(&self, temperature: Temperature, pressure: Pressure, composition: &[MoleFraction]) -> Vec<f64>;
+    fn residual_enthalpy(&self, temperature: Temperature, pressure: Pressure, composition: &[MoleFraction]) -> EnergyPerMol;
+    // ... other thermodynamic properties with default implementations where possible
+}
+
+This allows researchers to implement novel EoS (e.g., machine-learned potentials, custom SAFT variants) and plug them into the flash/phase equilibrium framework without rewriting the solver infrastructure.
+Performance
+Vectorization: Flash calculations for multiple compositions (e.g., in distillation column stages) should be vectorized using SIMD where possible. The flash_pt_batch function processes multiple compositions in parallel.
+Caching: Pure-component properties and BIPs should be cached to avoid repeated lookups. Use std::collections::HashMap with component index as key.
+Parallelism: Independent flash calculations (e.g., in flowsheet simulation with 100+ streams) can be parallelized using Rayon. The FlashCalculator is thread-safe and supports concurrent calls.
+Memory efficiency: Avoid allocating large temporary arrays in tight loops. Use stack-allocated arrays for small compositions (< 20 components) and pre-allocated vectors for larger systems.
+Validation & Testing
+All EoS implementations must be validated against experimental data:
+Pure-component validation: Compare EoS predictions against NIST REFPROP for pure substances (water, CO2, methane, ethanol) across wide T/P ranges
+VLE validation: Compare bubble/dew point predictions against DECHEMA VLE data for 100+ binary mixtures (hydrocarbons, alcohols, water, gases)
+Flash validation: Compare flash results against ASPEN Plus and PRO/II for multi-component mixtures (natural gas, crude oil, polymer solutions)
+Stability testing: Verify TPD minimization correctly identifies stable/unstable regions for known azeotropic and miscibility gap systems
+Regression tracking: Maintain a database of deviations from experimental data (AAD% for pressure, temperature, composition) and track improvements as parameters are updated
+5. Build Order
+tpt-thermo-core (foundation types, traits, mixing rules)
+tpt-thermo-data (component database, parameter loading, validation)
+tpt-thermo-eos-cubic (PR, SRK, volume translation, mixing rules)
+tpt-thermo-eos-activity (NRTL, UNIQUAC, UNIFAC, Wilson)
+tpt-thermo-eos-saft (PC-SAFT, association, SAFT-VR Mie, eSAFT)
+tpt-thermo-flash (PT, PH, TV, TS, PU, PV solvers with robust initialization)
+tpt-thermo-phase (TPD stability, multiphase equilibrium, critical points)
+tpt-thermo-bubble-dew (bubble/dew point, phase envelope tracing)
+tpt-thermo-transport (viscosity, conductivity, diffusivity correlations)
+tpt-thermo-electrolyte (Pitzer, eNRTL, HKF, ion association)
+tpt-thermo-polymer (Flory-Huggins, Sanchez-Lacombe, cloud point)
+tpt-thermo (umbrella with feature gates, convenience API)
+6. Testing Strategy
+Pure-component validation: Compare EoS predictions against NIST REFPROP for 50+ pure substances across T = 100-1000 K, P = 0.1-1000 bar. Target accuracy: density < 1%, enthalpy < 2%, vapor pressure < 3%.
+VLE validation: Compare bubble/dew point predictions against DECHEMA VLE data for 100+ binary mixtures. Target accuracy: pressure < 5%, temperature < 2 K, vapor composition < 0.02 mole fraction.
+Flash validation: Compare flash results against ASPEN Plus and PRO/II for 20+ multi-component mixtures (5-20 components). Target accuracy: phase fraction < 1%, composition < 0.01 mole fraction.
+Stability testing: Verify TPD minimization correctly identifies stable/unstable regions for 30+ known systems (azeotropes, miscibility gaps, near-critical points).
+Transport property validation: Compare viscosity, conductivity, diffusivity predictions against experimental data for 50+ pure substances and 20+ mixtures. Target accuracy: viscosity < 10%, conductivity < 15%, diffusivity < 20%.
+Electrolyte validation: Compare activity coefficients and osmotic coefficients against experimental data for 30+ single-electrolyte and 10+ mixed-electrolyte systems up to 6 molal. Target accuracy: activity coefficient < 5%, osmotic coefficient < 2%.
+Edge cases: Test near-critical points, azeotropes, systems with trace components (< 1e-6 mole fraction), and highly non-ideal mixtures (water-hydrocarbon, polymer solutions).
+Regression testing: Track deviations from experimental data as EoS parameters are updated. Maintain a dashboard showing AAD% for each property and mixture type.
+Performance benchmarks: Measure flash calculation time for 1-component, 10-component, and 50-component systems. Target: < 1 ms per flash for 10-component system on modern hardware.
+7. Tier 2 Consumption Model
+Each Tier 2 repository depends on tpt-thermo with only the features it needs:
+tpt-process: features = ["cubic", "activity", "flash", "phase", "bubble-dew", "transport", "data"] for distillation, absorption, reactor modeling, and heat exchanger design
+tpt-materials: features = ["saft", "phase", "polymer", "data"] for polymer blending, phase diagram generation, and microstructure prediction
+tpt-earth: features = ["cubic", "electrolyte", "flash", "data"] for geothermal brine modeling, hydrocarbon reservoir simulation, and CO2 sequestration
+tpt-energy: features = ["cubic", "flash", "transport", "data"] for ORC (Organic Rankine Cycle) working fluid selection, heat exchanger design, and refrigeration cycle analysis
+tpt-medical: features = ["transport", "data"] for drug delivery system modeling (diffusion through membranes) and physiological fluid properties
+tpt-transportation: features = ["cubic", "transport", "data"] for fuel property prediction and combustion modeling
+tpt-construction: features = ["transport", "data"] for HVAC psychrometrics and building material moisture transport
+tpt-electronics: features = ["transport", "data"] for coolant properties and thermal management fluid selection
+This ensures minimal compile-time overhead and binary size for each domain while providing access to the full thermodynamic toolkit when needed.

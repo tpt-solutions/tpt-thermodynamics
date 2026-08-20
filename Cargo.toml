@@ -1,0 +1,42 @@
+[workspace]
+resolver = "2"
+members = [
+    "xtask",
+    "examples",
+]
+exclude = []
+
+[workspace.package]
+description = "tpt-thermodynamics — multi-component mixture properties, phase equilibria, and equations of state for the TPT Solutions engineering/materials/earth/energy stack"
+authors = ["TPT Solutions"]
+edition = "2021"
+rust-version = "1.84"
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/tpt-solutions/tpt-thermodynamics"
+repository = "https://github.com/tpt-solutions/tpt-thermodynamics"
+
+[workspace.dependencies]
+# In-workspace crates are added here (path = "crates/<name>") as each phase lands.
+
+# Upstream substrate — consumed as crates.io version strings, matching how every
+# other tpt-* repo cross-depends (not path/git deps across repo boundaries).
+tpt-math-numeric = "0.1.0"
+tpt-math-units = "0.1.0"
+tpt-math-optimize-general = "0.1.0"
+tpt-math-optimize-convex = "0.1.0"
+tpt-math-linalg = "0.1.0"
+tpt-eng-props = "0.1.1"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "warn"
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = "warn"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+overflow-checks = true
