@@ -162,8 +162,8 @@ impl<'a> BubbleDewSolver<'a> {
         p: Pressure,
         x: &[f64],
     ) -> Result<f64, ThermoError> {
-        let (t_lo, _t_hi) = self.t_bounds();
-        let (lo, hi) = (0.3 * self.min_tc(), (0.99 * self.min_tc()).max(t_lo));
+        let (mn, mx) = self.feed_tc(x);
+        let (lo, hi) = (0.3 * mn, 1.2 * mx);
         let eos = self.eos;
         root_scalar(
             |v: f64| bubble_g(eos, Temperature::new::<kelvin>(v), p, x),
@@ -182,8 +182,8 @@ impl<'a> BubbleDewSolver<'a> {
         p: Pressure,
         y: &[f64],
     ) -> Result<f64, ThermoError> {
-        let (t_lo, _t_hi) = self.t_bounds();
-        let (lo, hi) = (0.3 * self.min_tc(), (0.99 * self.max_tc()).max(t_lo));
+        let (mn, mx) = self.feed_tc(y);
+        let (lo, hi) = (0.3 * mn, 1.2 * mx);
         let eos = self.eos;
         root_scalar(
             |v: f64| dew_g(eos, Temperature::new::<kelvin>(v), p, y),
@@ -193,6 +193,46 @@ impl<'a> BubbleDewSolver<'a> {
             hi,
         )
         
+    }
+
+    /// Bubble-point temperature with a supplied `t_guess` (continuation). The
+    /// search is confined to `[0.5·t_guess, 1.5·t_guess]`, so a good guess
+    /// (e.g. the previous envelope point) yields the physical root and avoids
+    /// the spurious low-temperature roots that appear at high pressure.
+    pub(crate) fn boundary_temperature_guess(
+        &self,
+        p: Pressure,
+        x: &[f64],
+        t_guess: f64,
+    ) -> Result<f64, ThermoError> {
+        let (mn, mx) = self.feed_tc(x);
+        let (lo, hi) = (0.3 * mn, 1.2 * mx);
+        let eos = self.eos;
+        root_scalar_guess(
+            |v: f64| bubble_g(eos, Temperature::new::<kelvin>(v), p, x),
+            t_guess,
+            lo,
+            hi,
+        )
+    }
+
+    /// Dew-point temperature with a supplied `t_guess` (continuation), mirroring
+    /// [`boundary_temperature_guess`].
+    pub(crate) fn boundary_temperature_dew_guess(
+        &self,
+        p: Pressure,
+        y: &[f64],
+        t_guess: f64,
+    ) -> Result<f64, ThermoError> {
+        let (mn, mx) = self.feed_tc(y);
+        let (lo, hi) = (0.3 * mn, 1.2 * mx);
+        let eos = self.eos;
+        root_scalar_guess(
+            |v: f64| dew_g(eos, Temperature::new::<kelvin>(v), p, y),
+            t_guess,
+            lo,
+            hi,
+        )
     }
 
     /// Bubble-point pressure of liquid `x` at temperature `t`: root-solve
@@ -256,6 +296,32 @@ impl<'a> BubbleDewSolver<'a> {
             m = 1000.0;
         }
         m
+    }
+
+    /// Minimum and maximum critical temperatures over the components actually
+    /// present in `z` (nonzero mole fraction). Using the feed-present range
+    /// rather than the whole database's keeps the boundary root scan sensible
+    /// when the database contains much lighter or heavier species than the
+    /// mixture being solved (e.g. the full seed set alongside a benzene/toluene
+    /// feed, where helium would otherwise force a ~5 K scan window).
+    fn feed_tc(&self, z: &[f64]) -> (f64, f64) {
+        let mut mn = f64::INFINITY;
+        let mut mx = 0.0_f64;
+        for i in 0..z.len().min(self.db.num_components()) {
+            if z[i] > 0.0 {
+                if let Ok(tc) = self.db.critical_temperature(i) {
+                    mn = mn.min(tc.value);
+                    mx = mx.max(tc.value);
+                }
+            }
+        }
+        if !mn.is_finite() {
+            mn = self.min_tc();
+        }
+        if mx <= 0.0 {
+            mx = self.max_tc();
+        }
+        (mn, mx)
     }
 }
 
@@ -329,7 +395,11 @@ pub fn dew_g(
 }
 
 /// Scan `var` from `start` in `step` increments until the (NaN-aware) residual
-/// `f` changes sign, then refine the root with bisection.
+/// `f` changes sign, then refine the root with bisection. The first sign change
+/// is returned (this is the physical bubble/dew point for the standalone
+/// solvers at the pressures/temperatures used in the seed validation; the phase
+/// envelope uses [`root_scalar_guess`] with continuation to avoid spurious
+/// low-variable roots that appear at high `P`/`T`).
 fn root_scalar<F>(f: F, start: f64, step: f64, lo: f64, hi: f64) -> Result<f64, ThermoError>
 where
     F: Fn(f64) -> f64,
@@ -344,13 +414,56 @@ where
             let (a, b) = if vprev <= var { (vprev, var) } else { (var, vprev) };
             return tpt_thermo_core::bisection(|v: f64| f(v), a, b, 1e-7, 200)
                 .map_err(ThermoError::Numerical);
-                ;
         }
         vprev = var;
         fprev = fv;
         if (step > 0.0 && var >= hi) || (step < 0.0 && var <= lo) {
             break;
         }
+    }
+    Err(ThermoError::Numerical(ConvergenceStatus::NotConverged))
+}
+
+/// Like [`root_scalar`] but searches for a sign change only within a bracket
+/// `[centre·0.5, centre·1.5]` (clamped to `[lo, hi]`). Used by the phase
+/// envelope, which carries the previous solution as `centre` (continuation):
+/// near the true root the residual is monotonic, so this returns the physical
+/// point and ignores the spurious low-/high-variable roots that a full-range
+/// scan would otherwise pick up at high `P`/`T`.
+fn root_scalar_guess<F>(f: F, centre: f64, lo: f64, hi: f64) -> Result<f64, ThermoError>
+where
+    F: Fn(f64) -> f64,
+{
+    let a = (centre * 0.5).max(lo);
+    let b = (centre * 1.5).min(hi);
+    if b <= a {
+        return Err(ThermoError::Numerical(ConvergenceStatus::NotConverged));
+    }
+    // If the bracket already brackets a root, refine directly.
+    let fa = f(a);
+    let fb = f(b);
+    if fa.is_finite() && fb.is_finite() && fa * fb <= 0.0 {
+        return tpt_thermo_core::bisection(|v: f64| f(v), a, b, 1e-7, 200)
+            .map_err(ThermoError::Numerical);
+    }
+    // Otherwise scan finely inside the bracket for the first sign change.
+    let step = (b - a) / 2000.0;
+    let mut var = a;
+    let mut fprev = f(var);
+    let mut vprev = var;
+    for _ in 0..5000 {
+        var += step;
+        if var >= b {
+            break;
+        }
+        let fv = f(var);
+        if fprev.is_finite() && fv.is_finite() && fprev * fv <= 0.0 {
+            let (c, d) = if vprev <= var { (vprev, var) } else { (var, vprev) };
+            return tpt_thermo_core::bisection(|v: f64| f(v), c, d, 1e-7, 200)
+                .map_err(ThermoError::Numerical);
+        }
+        vprev = var;
+        fprev = fv;
     }
     Err(ThermoError::Numerical(ConvergenceStatus::NotConverged))
 }

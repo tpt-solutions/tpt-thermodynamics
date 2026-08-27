@@ -70,11 +70,22 @@ pub fn detect_azeotrope(
             }
         };
         // Positive f means bubble above dew (normal VLE); the azeotrope is where
-        // they cross (f = 0). Look for a sign change (or exact zero).
+        // they cross (f = 0). Look for a genuine sign change (or exact zero) that
+        // is (a) away from the pure-component endpoints and (b) large enough in
+        // magnitude to be a real separation between the curves rather than the
+        // numerical noise that makes P_bubble ≈ P_dew near x → 0/1.
         let f = pb - pd;
-        if prev_f.is_finite() && ((f == 0.0) || (prev_f * f < 0.0)) {
+        let interior = x1 > 0.03 && x1 < 0.97 && prev_x > 0.03 && prev_x < 0.97;
+        let significant = prev_f.abs() > 1.0 && f.abs() > 1.0;
+        if prev_f.is_finite() && interior && significant && (f == 0.0 || prev_f * f < 0.0) {
             let (a, b) = (prev_x, x1);
             let xr = bisect(solver, t, a, b, prev_f)?;
+            if xr <= 0.02 || xr >= 0.98 {
+                // Crossing resolved to a pure-component endpoint: an artifact.
+                prev_x = x1;
+                prev_f = f;
+                continue;
+            }
             let mut xr_vec = vec![0.0f64; nc];
             xr_vec[0] = xr;
             xr_vec[1] = 1.0 - xr;

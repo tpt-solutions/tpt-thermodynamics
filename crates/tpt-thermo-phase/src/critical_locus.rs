@@ -5,8 +5,8 @@
 use alloc::vec;
 use alloc::vec::Vec;
 use tpt_thermo_core::quantities::{MolarVolume, Pressure, Temperature};
-use tpt_thermo_core::{ComponentDatabase, EquationOfState, ThermoError};
 use tpt_thermo_core::R;
+use tpt_thermo_core::{ComponentDatabase, EquationOfState, ThermoError};
 use uom::si::molar_volume::cubic_meter_per_mole;
 use uom::si::pressure::pascal;
 use uom::si::thermodynamic_temperature::kelvin;
@@ -114,8 +114,18 @@ pub fn mixture_critical_point<E: EquationOfState + ?Sized>(
         let pv_tm = eos
             .dp_dv(Temperature::new::<kelvin>(t.value - ht), v, z)
             .unwrap_or(f64::NAN);
-        let pvv_vp = d2p_dv2(eos, t, MolarVolume::new::<cubic_meter_per_mole>(v.value + hv), z);
-        let pvv_vm = d2p_dv2(eos, t, MolarVolume::new::<cubic_meter_per_mole>(v.value - hv), z);
+        let pvv_vp = d2p_dv2(
+            eos,
+            t,
+            MolarVolume::new::<cubic_meter_per_mole>(v.value + hv),
+            z,
+        );
+        let pvv_vm = d2p_dv2(
+            eos,
+            t,
+            MolarVolume::new::<cubic_meter_per_mole>(v.value - hv),
+            z,
+        );
         let pvv_tp = d2p_dv2(eos, Temperature::new::<kelvin>(t.value + ht), v, z);
         let pvv_tm = d2p_dv2(eos, Temperature::new::<kelvin>(t.value - ht), v, z);
         if [pv_vp, pv_vm, pv_tp, pv_tm, pvv_vp, pvv_vm, pvv_tp, pvv_tm]
@@ -130,7 +140,10 @@ pub fn mixture_critical_point<E: EquationOfState + ?Sized>(
         }
         let j = [
             [(pv_vp - pv_vm) / (2.0 * hv), (pv_tp - pv_tm) / (2.0 * ht)],
-            [(pvv_vp - pvv_vm) / (2.0 * hv), (pvv_tp - pvv_tm) / (2.0 * ht)],
+            [
+                (pvv_vp - pvv_vm) / (2.0 * hv),
+                (pvv_tp - pvv_tm) / (2.0 * ht),
+            ],
         ];
         // The critical point is a horizontal inflection, so the (v,T) Jacobian
         // is singular there; regularise with Levenberg–Marquardt damping.
@@ -157,7 +170,9 @@ pub fn mixture_critical_point<E: EquationOfState + ?Sized>(
             }
         }
     }
-    Err(ThermoError::Numerical(tpt_thermo_core::ConvergenceStatus::NotConverged))
+    Err(ThermoError::Numerical(
+        tpt_thermo_core::ConvergenceStatus::NotConverged,
+    ))
 }
 
 /// Trace the critical locus of a binary (`components i0`/`i1`) as the mole

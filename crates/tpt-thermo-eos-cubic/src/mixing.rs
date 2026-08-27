@@ -91,19 +91,24 @@ impl CubicMixing for VdwMixing {
     }
 
     fn a_mix(&self, a: &[f64], _b: &[f64], z: &[f64], t: f64, _p: f64) -> f64 {
+        let n = z.len();
         let mut sum = 0.0;
-        for (i, &zi) in z.iter().enumerate() {
-            for (j, &zj) in z.iter().enumerate() {
-                sum += zi * zj * self.a_ij(a, i, j, t);
+        #[allow(clippy::needless_range_loop)]
+        for i in 0..n {
+            #[allow(clippy::needless_range_loop)]
+            for j in 0..n {
+                sum += z[i] * z[j] * self.a_ij(a, i, j, t);
             }
         }
         sum
     }
 
     fn aij_sum(&self, a: &[f64], _b: &[f64], z: &[f64], i: usize, t: f64, _p: f64) -> f64 {
+        let n = z.len();
         let mut sum = 0.0;
-        for (j, &zj) in z.iter().enumerate() {
-            sum += zj * self.a_ij(a, i, j, t);
+        #[allow(clippy::needless_range_loop)]
+        for j in 0..n {
+            sum += z[j] * self.a_ij(a, i, j, t);
         }
         sum
     }

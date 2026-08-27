@@ -38,6 +38,10 @@
 //! ```
 
 #![cfg_attr(not(feature = "std"), no_std)]
+// Matrix/tensor algebra in this crate is clearest with explicit index loops
+// over `i`/`j`; `needless_range_loop` is a false positive for double-indexed
+// access (e.g. `a[i][j]` with `x[j]`), so it is allowed crate-wide.
+#![allow(clippy::needless_range_loop)]
 
 extern crate alloc;
 

@@ -13,6 +13,7 @@
 //!
 //! Broad 10-20 seed-binary tolerance validation against literature VLE requires a
 //! fitted-parameter set / vapour-pressure table and is tracked as Deferred Scope.
+#![allow(clippy::needless_range_loop)]
 
 use tpt_thermo_core::quantities::Temperature;
 use tpt_thermo_eos_activity::parameters::TdParam;
@@ -39,7 +40,10 @@ fn bubble_pressure(
     let mut p = 0.0;
     for i in 0..x.len() {
         let gamma = model(t, x, i);
-        assert!(gamma > 0.0 && gamma.is_finite(), "γ must be positive and finite");
+        assert!(
+            gamma > 0.0 && gamma.is_finite(),
+            "γ must be positive and finite"
+        );
         p += x[i] * gamma * psat[i];
     }
     p
@@ -83,7 +87,10 @@ fn nrtl_nonideal_gives_physical_bubble_pressure() {
     let pmin = psat.iter().cloned().fold(f64::INFINITY, f64::min);
     let pmax = psat.iter().cloned().fold(0.0_f64, f64::max);
     assert!(p.is_finite() && p > 0.0);
-    assert!(p >= 0.5 * pmin && p <= 2.0 * pmax, "P={p} outside [{pmin},{pmax}]");
+    assert!(
+        p >= 0.5 * pmin && p <= 2.0 * pmax,
+        "P={p} outside [{pmin},{pmax}]"
+    );
 }
 
 #[test]

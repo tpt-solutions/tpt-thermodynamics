@@ -62,7 +62,11 @@ where
         for c in 0..m {
             a[m - 1][c] = t[c];
         }
-        let b: Vec<f64> = fy.iter().chain(core::iter::once(&arc)).map(|v| -v).collect();
+        let b: Vec<f64> = fy
+            .iter()
+            .chain(core::iter::once(&arc))
+            .map(|v| -v)
+            .collect();
         let d = solve_linear(&a, &b)?;
         let mut step_norm = 0.0_f64;
         for i in 0..m {
@@ -125,7 +129,10 @@ mod tests {
             x = nx;
             t = nt;
             let r2 = x[0] * x[0] + x[1] * x[1];
-            assert!((r2 - 1.0).abs() < 1e-3, "point should stay on the unit circle");
+            assert!(
+                (r2 - 1.0).abs() < 1e-3,
+                "point should stay on the unit circle"
+            );
         }
         // After 40 steps of 0.1 we should have gone most of the way around.
         assert!(x[0] < 0.0, "should have passed the (-1, 0) region");

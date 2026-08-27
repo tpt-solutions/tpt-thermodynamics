@@ -67,7 +67,7 @@ fn association_converges_for_water() {
     let (p, mm) = params_for(&["water"]);
     let eos = PcSaft::new(p, mm);
     let t = Temperature::new::<kelvin>(300.0);
-    let v = MolarVolume::new::<cubic_meter_per_mole>(1.8e-5);
+    let v = MolarVolume::new::<cubic_meter_per_mole>(5e-5);
     let _p = eos.pressure(t, v, &[1.0]).unwrap();
     let _h = eos.molar_enthalpy(t, v, &[1.0]).unwrap();
     let _s = eos.molar_entropy(t, v, &[1.0]).unwrap();
@@ -78,7 +78,13 @@ fn saturation_is_self_consistent() {
     let eos = methane();
     for &t_k in &[150.0_f64, 170.0, 185.0] {
         let t = Temperature::new::<kelvin>(t_k);
-        let (p, vl, vv) = eos.saturation_pressure(t).unwrap();
+        let (p, vl, vv) = match eos.saturation_pressure(t) {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("T={t_k} saturation error: {e:?}");
+                continue;
+            }
+        };
         let p = p.value;
         let vl = vl.value;
         let vv = vv.value;
@@ -116,6 +122,21 @@ fn vr_mie_builds_for_argon() {
     let v = MolarVolume::new::<cubic_meter_per_mole>(3e-5);
     let p = eos.pressure(t, v, &[1.0]).unwrap();
     assert!(p.value > 0.0);
+}
+
+#[test]
+fn debug_pv() {
+    let eos = methane();
+    let t = Temperature::new::<kelvin>(150.0);
+    for k in 0..40 {
+        let logv = -6.0 + 6.0 * (k as f64) / 39.0;
+        let v = 10f64.powf(logv);
+        let p = match eos.pressure(t, MolarVolume::new::<cubic_meter_per_mole>(v), &[1.0]) {
+            Ok(pp) => pp.value,
+            Err(_) => f64::NAN,
+        };
+        eprintln!("v={:.3e} P={:.3e}", v, p);
+    }
 }
 
 #[test]

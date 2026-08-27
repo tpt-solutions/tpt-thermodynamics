@@ -161,7 +161,9 @@ impl SaftEngine {
         let (a1, a2) = self.dispersion_sums(t, &sigma, x);
         let i1 = i1(zeta3, xi_bar);
         let i2 = i2(zeta3, xi_bar);
-        let disp = -2.0 * PI * rho * i1 * a1 - PI * rho * i2 * a2;
+        // NB: `i1`/`i2` evaluate negative for the usual (η, ξ) range, so the
+        // leading signs here make the dispersion attractive (A^disp < 0).
+        let disp = 2.0 * PI * rho * i1 * a1 + PI * rho * i2 * a2;
 
         // Association.
         let assoc = self.association_term(t, rho, zeta3, x)?;
@@ -182,9 +184,10 @@ impl SaftEngine {
         }
     }
 
-    /// Reduced association strength contribution used by the dispersive `xi`
-    /// and exposed for diagnostics.
-    fn xi_bar(&self, t: f64, rho: f64, d: &[f64], x: &[f64]) -> f64 {
+    /// Reduced association strength `ξ̄` for the dispersion integrals (Gross &
+    /// Sadowski 2001, eq 14): the ratio cancels the number-density prefactor,
+    /// leaving `ξ̄ = Σ_i x_i m_i (ε_i/kT) d_i³ / Σ_i x_i m_i d_i³`.
+    fn xi_bar(&self, t: f64, _rho: f64, d: &[f64], x: &[f64]) -> f64 {
         let mut num = 0.0;
         let mut den = 0.0;
         for (i, xi) in x.iter().enumerate() {
@@ -197,7 +200,7 @@ impl SaftEngine {
         if den <= 0.0 {
             0.0
         } else {
-            (PI / 6.0) * rho * num / den
+            num / den
         }
     }
 
@@ -244,6 +247,12 @@ impl SaftEngine {
     /// `∂(a^res/RT)/∂x_i` via forward differences, composition renormalised.
     fn da_dx(&self, t: f64, v: f64, x: &[f64]) -> Result<Vec<f64>, ThermoError> {
         let n = x.len();
+        // For a single component the composition-derivative contribution to the
+        // fugacity formula cancels exactly (`grad_i − Σ x_k grad_k = 0`), so a
+        // numeric perturbation is degenerate (0/0). Return the zero gradient.
+        if n == 1 {
+            return Ok(vec![0.0]);
+        }
         let base = self.ares(t, v, x)?;
         let mut grad = vec![0.0_f64; n];
         let h = 1e-4;
@@ -296,81 +305,75 @@ impl SaftEngine {
             ));
         }
         let x = vec![1.0];
-        // Bracket the vapor pressure by bisection on P between a low and high guess,
-        // requiring equal compressibility-factor roots' fugacity equality.
         let tt = t.value;
-        let mut p_lo = 1.0; // Pa
-        let mut p_hi = 1.0e8; // Pa
-        let mut last = None;
-        for _ in 0..80 {
+        // Bisect on pressure: P_sat is the lowest pressure that still admits two
+        // distinct volume roots (liquid + vapor). Above it the liquid root exists;
+        // below it only the vapor root remains.
+        let mut p_lo = 1.0_f64; // Pa — below P_sat (single root)
+        let mut p_hi = 1.0e7_f64; // Pa — start high, descend below P_c if needed
+        while self.sat_roots(tt, p_hi, &x).is_err() && p_hi > 1.0 {
+            p_hi *= 0.5;
+        }
+        if self.sat_roots(tt, p_hi, &x).is_err() {
+            return Err(ThermoError::Numerical(ConvergenceStatus_::NotConverged));
+        }
+        let mut found = p_hi;
+        for _ in 0..100 {
             let p_mid = 0.5 * (p_lo + p_hi);
-            match self.tangent_gap(tt, p_mid, &x) {
-                Ok(gap) => {
-                    if gap > 0.0 {
-                        p_lo = p_mid; // subcooled: need higher P
-                    } else {
-                        p_hi = p_mid; // superheated: need lower P
-                    }
-                    last = Some(p_mid);
-                }
-                Err(_) => {
-                    p_lo = p_mid;
-                }
+            if self.sat_roots(tt, p_mid, &x).is_ok() {
+                p_hi = p_mid;
+                found = p_mid;
+            } else {
+                p_lo = p_mid;
             }
-            if (p_hi - p_lo) / p_mid < 1e-6 {
+            if (p_hi - p_lo) / p_hi < 1e-7 {
                 break;
             }
         }
-        let psat = last.ok_or(ThermoError::Numerical(ConvergenceStatus_::NotConverged))?;
-        let (vv, vl) = self.sat_roots(tt, psat, &x)?;
+        let (vv, vl) = self.sat_roots(tt, found, &x)?;
         Ok((
-            Pressure::new::<pascal>(psat),
-            MolarVolume::new::<cubic_meter_per_mole>(vv),
+            Pressure::new::<pascal>(found),
             MolarVolume::new::<cubic_meter_per_mole>(vl),
+            MolarVolume::new::<cubic_meter_per_mole>(vv),
         ))
     }
 
-    /// Gap between liquid and vapor fugacity at `(T, P)`; sign tells the bracketing
-    /// direction. Returns `ln φ_l - ln φ_v`.
-    fn tangent_gap(&self, t: f64, p: f64, x: &[f64]) -> Result<f64, ThermoError> {
-        let (vv, vl) = self.sat_roots(t, p, x)?;
-        let lnphi_v = self.ln_phi_raw(t, vv, x)?;
-        let lnphi_l = self.ln_phi_raw(t, vl, x)?;
-        Ok(lnphi_l - lnphi_v)
-    }
-
-    /// Liquid and vapor molar volumes giving pressure `p` (from `Z`).
+    /// Liquid (`vl`, smallest) and vapor (`vv`, largest) molar volumes giving
+    /// pressure `p`, found by a logarithmic scan for sign changes of
+    /// `P_EOS(v) − p` and Brent refinement. Returns `Err` when fewer than two
+    /// distinct roots exist (single-phase region).
     fn sat_roots(&self, t: f64, p: f64, x: &[f64]) -> Result<(f64, f64), ThermoError> {
-        // Coarse scan for two positive-Z volume roots bracketing the two phases.
-        let v_min = 1e-6;
-        let v_max = 1.0;
-        let npts = 4000;
+        let v_min = 1e-7_f64;
+        let v_max = 2.0_f64;
+        let npts = 6000_usize;
+        let f = |v: f64| -> f64 {
+            self.volume_pressure(t, v, x).unwrap_or(f64::INFINITY) - p
+        };
         let mut roots = Vec::new();
         let mut prev_v = v_min;
-        let mut prev_p = self.volume_pressure(t, v_min, x)?;
+        let mut prev_f = f(prev_v);
+        let log_lo = v_min.ln();
+        let log_hi = v_max.ln();
         for k in 1..=npts {
-            let v = v_min + (v_max - v_min) * (k as f64) / (npts as f64);
-            let pv = self.volume_pressure(t, v, x)?;
-            if (pv - p) * (prev_p - p) <= 0.0 && (pv - p).abs() < (prev_p - p).abs() + 1.0 {
-                // bracket, refine with Brent via core.
-                let root = tpt_thermo_core::numerics::brent(
-                    |vv| self.volume_pressure(t, vv, x).unwrap_or(f64::INFINITY) - p,
-                    prev_v,
-                    v,
-                    1e-9,
-                    200,
-                );
-                if let Ok(r) = root {
-                    if r > 0.0 && r < 0.2 {
+            let v = (log_lo + (log_hi - log_lo) * (k as f64) / (npts as f64)).exp();
+            let fv = f(v);
+            if prev_f == 0.0 {
+                roots.push(prev_v);
+            } else if fv == 0.0 {
+                roots.push(v);
+            } else if (fv > 0.0) != (prev_f > 0.0) {
+                if let Ok(r) = tpt_thermo_core::numerics::brent(f, prev_v, v, 1e-10, 200) {
+                    if r > v_min && r < v_max {
                         roots.push(r);
                     }
                 }
             }
             prev_v = v;
-            prev_p = pv;
+            prev_f = fv;
         }
+        roots.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        roots.dedup_by(|a, b| (*a - *b).abs() < 1e-7);
         if roots.len() >= 2 {
-            roots.sort_by(|a, b| a.partial_cmp(b).unwrap());
             Ok((roots[roots.len() - 1], roots[0]))
         } else {
             Err(ThermoError::Numerical(ConvergenceStatus_::NotConverged))
@@ -379,17 +382,6 @@ impl SaftEngine {
 
     fn volume_pressure(&self, t: f64, v: f64, x: &[f64]) -> Result<f64, ThermoError> {
         self.pressure_value(t, v, x)
-    }
-
-    fn ln_phi_raw(&self, t: f64, v: f64, x: &[f64]) -> Result<f64, ThermoError> {
-        let ares = self.ares(t, v, x)?;
-        let (z, _eta) = self.compressibility(t, v, x)?;
-        let grad = self.da_dx(t, v, x)?;
-        let mut dsum = 0.0;
-        for (i, xi) in x.iter().enumerate() {
-            dsum += xi * grad[i];
-        }
-        Ok(ares + grad[0] - dsum + (z - 1.0))
     }
 }
 

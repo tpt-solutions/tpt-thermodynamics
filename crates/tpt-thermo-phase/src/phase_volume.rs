@@ -26,25 +26,49 @@ pub trait PhaseVolume: Send + Sync {
 }
 
 impl PhaseVolume for CubicEos {
-    fn phase_volume(&self, t: Temperature, p: Pressure, z: &[f64], phase: Phase) -> Option<MolarVolume> {
+    fn phase_volume(
+        &self,
+        t: Temperature,
+        p: Pressure,
+        z: &[f64],
+        phase: Phase,
+    ) -> Option<MolarVolume> {
         self.solve_phase(t, p, z, phase).ok()
     }
 }
 
 impl PhaseVolume for PengRobinson {
-    fn phase_volume(&self, t: Temperature, p: Pressure, z: &[f64], phase: Phase) -> Option<MolarVolume> {
+    fn phase_volume(
+        &self,
+        t: Temperature,
+        p: Pressure,
+        z: &[f64],
+        phase: Phase,
+    ) -> Option<MolarVolume> {
         self.engine().phase_volume(t, p, z, phase)
     }
 }
 
 impl PhaseVolume for SoaveRedlichKwong {
-    fn phase_volume(&self, t: Temperature, p: Pressure, z: &[f64], phase: Phase) -> Option<MolarVolume> {
+    fn phase_volume(
+        &self,
+        t: Temperature,
+        p: Pressure,
+        z: &[f64],
+        phase: Phase,
+    ) -> Option<MolarVolume> {
         self.engine().phase_volume(t, p, z, phase)
     }
 }
 
 impl PhaseVolume for VolumeTranslated {
-    fn phase_volume(&self, t: Temperature, p: Pressure, z: &[f64], phase: Phase) -> Option<MolarVolume> {
+    fn phase_volume(
+        &self,
+        t: Temperature,
+        p: Pressure,
+        z: &[f64],
+        phase: Phase,
+    ) -> Option<MolarVolume> {
         self.engine().phase_volume(t, p, z, phase)
     }
 }
@@ -65,7 +89,13 @@ impl<'a> BrentPhaseVolume<'a> {
 }
 
 impl PhaseVolume for BrentPhaseVolume<'_> {
-    fn phase_volume(&self, t: Temperature, p: Pressure, z: &[f64], phase: Phase) -> Option<MolarVolume> {
+    fn phase_volume(
+        &self,
+        t: Temperature,
+        p: Pressure,
+        z: &[f64],
+        phase: Phase,
+    ) -> Option<MolarVolume> {
         solve_generic(self.eos, t, p, z, phase).map(|v| MolarVolume::new::<cubic_meter_per_mole>(v))
     }
 }
@@ -108,9 +138,9 @@ fn solve_generic(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tpt_thermo_core::component::ComponentDatabase;
     use tpt_thermo_data::SeedComponentDatabase;
     use tpt_thermo_eos_cubic::PengRobinson;
-    use tpt_thermo_core::component::ComponentDatabase;
     use uom::si::pressure::pascal;
     use uom::si::thermodynamic_temperature::kelvin;
 
@@ -123,8 +153,12 @@ mod tests {
         z[methane] = 1.0;
         let t = Temperature::new::<kelvin>(150.0);
         let p = Pressure::new::<pascal>(1.0e6);
-        let v_l = eos.phase_volume(t, p, &z, Phase::Liquid).expect("liquid root");
-        let v_v = eos.phase_volume(t, p, &z, Phase::Vapor).expect("vapor root");
+        let v_l = eos
+            .phase_volume(t, p, &z, Phase::Liquid)
+            .expect("liquid root");
+        let v_v = eos
+            .phase_volume(t, p, &z, Phase::Vapor)
+            .expect("vapor root");
         assert!(v_v > v_l, "vapor volume must exceed liquid volume");
     }
 
@@ -138,7 +172,10 @@ mod tests {
         let t = Temperature::new::<kelvin>(150.0);
         let p = Pressure::new::<pascal>(1.0e6);
         let direct = eos.phase_volume(t, p, &z, Phase::Vapor).unwrap().value;
-        let fb = BrentPhaseVolume::new(&eos).phase_volume(t, p, &z, Phase::Vapor).unwrap().value;
+        let fb = BrentPhaseVolume::new(&eos)
+            .phase_volume(t, p, &z, Phase::Vapor)
+            .unwrap()
+            .value;
         assert!((direct - fb).abs() / direct < 1e-6);
     }
 }

@@ -167,9 +167,12 @@ mod tests {
         for x1 in [0.1f64, 0.3, 0.5, 0.7, 0.9] {
             let x = [x1, 1.0 - x1];
             let ge = m.reduced_excess_gibbs_at(t, &x).unwrap();
-            let gd = x[0] * m.ln_gamma_at(t, &x, 0).unwrap()
-                + x[1] * m.ln_gamma_at(t, &x, 1).unwrap();
-            assert!((ge - gd).abs() < 1e-9, "g^E/RT != Σ x lnγ at x1={x1}: ge={ge}, gd={gd}");
+            let gd =
+                x[0] * m.ln_gamma_at(t, &x, 0).unwrap() + x[1] * m.ln_gamma_at(t, &x, 1).unwrap();
+            assert!(
+                (ge - gd).abs() < 1e-9,
+                "g^E/RT != Σ x lnγ at x1={x1}: ge={ge}, gd={gd}"
+            );
         }
     }
 

@@ -9,6 +9,7 @@ members = [
     "crates/tpt-thermo-eos-activity",
     "crates/tpt-thermo-eos-saft",
     "crates/tpt-thermo-eos-activity",
+    "crates/tpt-thermo-phase",
     "crates/tpt-thermo-bubble-dew",
 ]
 exclude = []
@@ -48,6 +49,9 @@ lto = "fat"
 codegen-units = 1
 strip = "symbols"
 overflow-checks = true
+
+
+
 
 
 

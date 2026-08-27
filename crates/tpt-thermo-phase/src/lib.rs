@@ -15,7 +15,6 @@
 //! crate provides is the component it needs.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-
 // Numerical code necessarily uses index-addressed loops over small matrices and
 // single-letter quantities (a, b, v, t, …); these are stylistic, not bugs.
 #![allow(clippy::needless_range_loop)]

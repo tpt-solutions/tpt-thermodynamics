@@ -52,10 +52,17 @@ pub struct GroupTable {
 
 impl GroupTable {
     /// Build from `R_k`, `Q_k` and a full interaction matrix.
-    pub fn new(r: Vec<f64>, q: Vec<f64>, interaction: Vec<Vec<TdParam>>) -> Result<Self, ThermoError> {
+    pub fn new(
+        r: Vec<f64>,
+        q: Vec<f64>,
+        interaction: Vec<Vec<TdParam>>,
+    ) -> Result<Self, ThermoError> {
         let ng = r.len();
-        if q.len() != ng || interaction.len() != ng || interaction.iter().any(|row| row.len() != ng) {
-            return Err(ThermoError::InvalidInput("UNIFAC group table dimension mismatch"));
+        if q.len() != ng || interaction.len() != ng || interaction.iter().any(|row| row.len() != ng)
+        {
+            return Err(ThermoError::InvalidInput(
+                "UNIFAC group table dimension mismatch",
+            ));
         }
         Ok(Self { r, q, interaction })
     }
@@ -91,7 +98,9 @@ impl UnifacModel {
         variant: UnifacVariant,
     ) -> Result<Self, ThermoError> {
         if groups.len() != n {
-            return Err(ThermoError::InvalidInput("UNIFAC component/group count mismatch"));
+            return Err(ThermoError::InvalidInput(
+                "UNIFAC component/group count mismatch",
+            ));
         }
         let ng = table.num_groups();
         for (i, g) in groups.iter().enumerate() {
@@ -105,7 +114,12 @@ impl UnifacModel {
                 let _ = i;
             }
         }
-        Ok(Self { n, groups, table, variant: variant })
+        Ok(Self {
+            n,
+            groups,
+            table,
+            variant,
+        })
     }
 
     /// The chosen variant.
@@ -115,12 +129,18 @@ impl UnifacModel {
 
     /// `R_i` for component `i`.
     pub fn r_i(&self, i: usize) -> f64 {
-        self.groups[i].iter().map(|&(g, c)| c * self.table.r[g]).sum()
+        self.groups[i]
+            .iter()
+            .map(|&(g, c)| c * self.table.r[g])
+            .sum()
     }
 
     /// `Q_i` for component `i`.
     pub fn q_i(&self, i: usize) -> f64 {
-        self.groups[i].iter().map(|&(g, c)| c * self.table.q[g]).sum()
+        self.groups[i]
+            .iter()
+            .map(|&(g, c)| c * self.table.q[g])
+            .sum()
     }
 
     fn group_fractions(&self, x: &[f64]) -> (Vec<f64>, Vec<f64>) {
@@ -226,7 +246,8 @@ impl UnifacModel {
         }
         let v_i = r_i / rs;
         let f_i = q_i / qs;
-        let comb = 1.0 - v_i + libm::log(v_i) - 5.0 * q_i * (1.0 - v_i / f_i + libm::log(v_i / f_i));
+        let comb =
+            1.0 - v_i + libm::log(v_i) - 5.0 * q_i * (1.0 - v_i / f_i + libm::log(v_i / f_i));
 
         // Residual term.
         let (_xg, theta) = self.group_fractions(x);
@@ -277,8 +298,12 @@ impl ExcessGibbsModel for UnifacModel {
 /// group coverage is Deferred Scope.
 pub fn seed_group_table() -> GroupTable {
     // Indices: 0 CH3, 1 CH2, 2 ACH, 3 OH, 4 H2O, 5 CH3OH, 6 COOH, 7 ACCH2.
-    let r = vec![0.9011, 0.6744, 0.5313, 1.0000, 0.9200, 1.4311, 1.3013, 1.0396];
-    let q = vec![0.8480, 0.5400, 0.4000, 1.2000, 1.4000, 1.4320, 1.2240, 0.6600];
+    let r = vec![
+        0.9011, 0.6744, 0.5313, 1.0000, 0.9200, 1.4311, 1.3013, 1.0396,
+    ];
+    let q = vec![
+        0.8480, 0.5400, 0.4000, 1.2000, 1.4000, 1.4320, 1.2240, 0.6600,
+    ];
     let mut inter = vec![vec![TdParam::default(); r.len()]; r.len()];
     // Helper to set a symmetric-ish pair (asymmetric a_mn, a_nm).
     let set = |inter: &mut Vec<Vec<TdParam>>, m: usize, n: usize, amn: f64, anm: f64| {
@@ -310,13 +335,13 @@ pub fn seed_group_table() -> GroupTable {
 pub fn seed_molecules() -> Vec<Vec<(usize, f64)>> {
     // [CH3, CH2, ACH, OH, H2O, CH3OH, COOH, ACCH2]
     vec![
-        vec![(0, 2.0), (1, 4.0)],       // n-hexane
+        vec![(0, 2.0), (1, 4.0)],           // n-hexane
         vec![(0, 1.0), (1, 1.0), (3, 1.0)], // ethanol
-        vec![(2, 6.0)],                 // benzene
-        vec![(2, 5.0), (0, 1.0)],       // toluene
-        vec![(4, 1.0)],                 // water
-        vec![(5, 1.0)],                 // methanol
-        vec![(0, 1.0), (6, 1.0)],       // acetic acid (CH3 + COOH)
+        vec![(2, 6.0)],                     // benzene
+        vec![(2, 5.0), (0, 1.0)],           // toluene
+        vec![(4, 1.0)],                     // water
+        vec![(5, 1.0)],                     // methanol
+        vec![(0, 1.0), (6, 1.0)],           // acetic acid (CH3 + COOH)
     ]
 }
 
@@ -355,8 +380,14 @@ mod tests {
             xx
         };
         let ge = m.reduced_excess_gibbs_at(t, &x).unwrap();
-        let gd: f64 = ids.iter().map(|&i| x[i] * m.ln_gamma_at(t, &x, i).unwrap()).sum();
-        assert!((ge - gd).abs() < 1e-9, "g^E/RT != Σ x lnγ: ge={ge}, gd={gd}");
+        let gd: f64 = ids
+            .iter()
+            .map(|&i| x[i] * m.ln_gamma_at(t, &x, i).unwrap())
+            .sum();
+        assert!(
+            (ge - gd).abs() < 1e-9,
+            "g^E/RT != Σ x lnγ: ge={ge}, gd={gd}"
+        );
     }
 
     #[test]

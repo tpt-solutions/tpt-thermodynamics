@@ -80,7 +80,9 @@ impl TdMatrix {
     pub fn from_full(data: Vec<Vec<TdParam>>) -> Result<Self, ThermoError> {
         let n = data.len();
         if n == 0 || data.iter().any(|row| row.len() != n) {
-            return Err(ThermoError::InvalidInput("TdMatrix must be square and non-empty"));
+            return Err(ThermoError::InvalidInput(
+                "TdMatrix must be square and non-empty",
+            ));
         }
         Ok(Self { n, data })
     }
@@ -132,7 +134,9 @@ impl InteractionMatrix {
     pub fn from_full(data: Vec<Vec<f64>>) -> Result<Self, ThermoError> {
         let n = data.len();
         if n == 0 || data.iter().any(|row| row.len() != n) {
-            return Err(ThermoError::InvalidInput("InteractionMatrix must be square and non-empty"));
+            return Err(ThermoError::InvalidInput(
+                "InteractionMatrix must be square and non-empty",
+            ));
         }
         Ok(Self { n, data })
     }

@@ -71,7 +71,9 @@ pub mod phase2 {
 /// Phase 4 examples: cubic-equation-of-state P-V-T behaviour with Peng-Robinson
 /// over the curated seed set.
 pub mod phase4 {
+    use tpt_thermo_core::component::ComponentDatabase;
     use tpt_thermo_core::quantities::{MolarVolume, Pressure, Temperature};
+    use tpt_thermo_core::EquationOfState;
     use tpt_thermo_data::SeedComponentDatabase;
     use tpt_thermo_eos_cubic::cubic_solver::Phase;
     use tpt_thermo_eos_cubic::PengRobinson;

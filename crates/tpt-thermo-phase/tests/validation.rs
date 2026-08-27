@@ -53,7 +53,10 @@ fn methane_butane_binary_is_two_phase() {
     let t = Temperature::new::<kelvin>(300.0);
     let p = Pressure::new::<pascal>(2.0e6);
     let res = ana.test(t, p, &z).unwrap();
-    assert!(!res.stable, "methane/n-butane at 300K, 2MPa should be unstable (two-phase)");
+    assert!(
+        !res.stable,
+        "methane/n-butane at 300K, 2MPa should be unstable (two-phase)"
+    );
 }
 
 #[test]
@@ -64,7 +67,14 @@ fn multiphase_classification_runs() {
     let nbutane = db.index_of("n-butane").unwrap();
     let z = composition(&db, &[(methane, 0.5), (nbutane, 0.5)]);
     let vol = &eos as &dyn PhaseVolume;
-    let r = detect_phases(&eos, vol, &db, Temperature::new::<kelvin>(300.0), Pressure::new::<pascal>(2.0e6), &z);
+    let r = detect_phases(
+        &eos,
+        vol,
+        &db,
+        Temperature::new::<kelvin>(300.0),
+        Pressure::new::<pascal>(2.0e6),
+        &z,
+    );
     assert!(r.num_phases >= 1);
     assert!(!r.stable);
 }
@@ -90,14 +100,22 @@ fn mixture_critical_point_within_pure_bounds() {
 fn critical_locus_traces_interior() {
     let db = SeedComponentDatabase::from_seed();
     let eos = PengRobinson::from_database(&db).unwrap();
-    let locus = critical_locus_binary(&eos, &db, 8);
+    let methane = db.index_of("methane").unwrap();
+    let ethane = db.index_of("ethane").unwrap();
+    let locus = critical_locus_binary(&eos, &db, methane, ethane, 8);
     // Interior (non-pure) points converge; pure-component endpoints are a
     // Jacobian singularity of the raw (v,T) system and are intentionally taken
     // from the database / engine instead.
     assert!(locus.len() >= 3, "expect interior locus points to converge");
     let tcs: Vec<f64> = locus.iter().map(|(_, tc, _)| tc.value).collect();
-    let tcm = db.critical_temperature(db.index_of("methane").unwrap()).unwrap().value;
-    let tce = db.critical_temperature(db.index_of("ethane").unwrap()).unwrap().value;
+    let tcm = db
+        .critical_temperature(db.index_of("methane").unwrap())
+        .unwrap()
+        .value;
+    let tce = db
+        .critical_temperature(db.index_of("ethane").unwrap())
+        .unwrap()
+        .value;
     // Critical temperature must stay bracketed by the pure-component values.
     assert!(
         *tcs.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap() > tcm - 2.0

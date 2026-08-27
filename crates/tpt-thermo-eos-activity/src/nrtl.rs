@@ -38,7 +38,9 @@ impl Nrtl {
     pub fn new(tau: TdMatrix, alpha: Vec<Vec<f64>>) -> Result<Self, ThermoError> {
         let n = tau.len();
         if alpha.len() != n || alpha.iter().any(|row| row.len() != n) {
-            return Err(ThermoError::InvalidInput("NRTL α matrix must match τ matrix size"));
+            return Err(ThermoError::InvalidInput(
+                "NRTL α matrix must match τ matrix size",
+            ));
         }
         Ok(Self { n, tau, alpha })
     }
@@ -67,7 +69,11 @@ impl Nrtl {
         for i in 0..self.n {
             for j in 0..self.n {
                 let a = if i == j { 0.0 } else { self.alpha[i][j] };
-                let tau = if i == j { 0.0 } else { self.tau.value_at(i, j, t) };
+                let tau = if i == j {
+                    0.0
+                } else {
+                    self.tau.value_at(i, j, t)
+                };
                 g[i * self.n + j] = libm::exp(-a * tau);
             }
         }
@@ -79,7 +85,11 @@ impl Nrtl {
             }
             let mut num = 0.0;
             for j in 0..self.n {
-                let tau = if j == i { 0.0 } else { self.tau.value_at(j, i, t) };
+                let tau = if j == i {
+                    0.0
+                } else {
+                    self.tau.value_at(j, i, t)
+                };
                 num += x[j] * g[j * self.n + i] * tau;
             }
             total += x[i] * num / denom;
@@ -97,7 +107,11 @@ impl Nrtl {
         for a in 0..self.n {
             for b in 0..self.n {
                 let alpha = if a == b { 0.0 } else { self.alpha[a][b] };
-                let tau = if a == b { 0.0 } else { self.tau.value_at(a, b, t) };
+                let tau = if a == b {
+                    0.0
+                } else {
+                    self.tau.value_at(a, b, t)
+                };
                 g[a * self.n + b] = libm::exp(-alpha * tau);
             }
         }
@@ -108,7 +122,11 @@ impl Nrtl {
         }
         let mut first = 0.0;
         for j in 0..self.n {
-            let tau = if j == i { 0.0 } else { self.tau.value_at(j, i, t) };
+            let tau = if j == i {
+                0.0
+            } else {
+                self.tau.value_at(j, i, t)
+            };
             first += x[j] * g[j * self.n + i] * tau;
         }
         first /= denom_i;
@@ -122,10 +140,18 @@ impl Nrtl {
             }
             let mut num = 0.0;
             for m in 0..self.n {
-                let tau = if m == j { 0.0 } else { self.tau.value_at(m, j, t) };
+                let tau = if m == j {
+                    0.0
+                } else {
+                    self.tau.value_at(m, j, t)
+                };
                 num += x[m] * g[m * self.n + j] * tau;
             }
-            let tau_ij = if i == j { 0.0 } else { self.tau.value_at(i, j, t) };
+            let tau_ij = if i == j {
+                0.0
+            } else {
+                self.tau.value_at(i, j, t)
+            };
             second += (x[j] * g[i * self.n + j] / denom_j) * (tau_ij - num / denom_j);
         }
         Ok(first + second)
@@ -191,9 +217,12 @@ mod tests {
         for x1 in [0.1f64, 0.3, 0.5, 0.7, 0.9] {
             let x = [x1, 1.0 - x1];
             let ge = m.reduced_excess_gibbs_at(t, &x).unwrap();
-            let gd = x[0] * m.ln_gamma_at(t, &x, 0).unwrap()
-                + x[1] * m.ln_gamma_at(t, &x, 1).unwrap();
-            assert!((ge - gd).abs() < 1e-9, "g^E/RT != Σ x lnγ at x1={x1}: ge={ge}, gd={gd}");
+            let gd =
+                x[0] * m.ln_gamma_at(t, &x, 0).unwrap() + x[1] * m.ln_gamma_at(t, &x, 1).unwrap();
+            assert!(
+                (ge - gd).abs() < 1e-9,
+                "g^E/RT != Σ x lnγ at x1={x1}: ge={ge}, gd={gd}"
+            );
         }
     }
 
@@ -209,6 +238,9 @@ mod tests {
         // Correct infinite-dilution limit at x1 = 1: ln γ_2^∞ = τ_12 + G_21 τ_21.
         let expected = tau12 + g21 * tau21;
         let got = m.ln_gamma_at(t, &[1.0 - 1e-9, 1e-9], 1).unwrap();
-        assert!((got - expected).abs() < 1e-6, "got {got}, expected {expected}");
+        assert!(
+            (got - expected).abs() < 1e-6,
+            "got {got}, expected {expected}"
+        );
     }
 }

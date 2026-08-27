@@ -1,0 +1,31 @@
+[package]
+name = "tpt-thermo-flash"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Isothermal/isoenergetic flash calculators (Rachford-Rice PT/PH/TV/TS/PU/PV, LLE) for tpt-thermodynamics."
+
+[dependencies]
+tpt-thermo-core = { path = "../tpt-thermo-core" }
+tpt-thermo-data = { path = "../tpt-thermo-data" }
+tpt-math-numeric = { workspace = true, default-features = false, features = ["alloc", "libm"] }
+tpt-math-units = { workspace = true, default-features = false, features = ["alloc"] }
+uom = { workspace = true, default-features = false, features = ["si", "f32", "f64", "autoconvert"] }
+typenum = "1"
+libm = "0.2"
+
+[dev-dependencies]
+tpt-thermo-eos-cubic = { path = "../tpt-thermo-eos-cubic" }
+tpt-thermo-eos-activity = { path = "../tpt-thermo-eos-activity" }
+
+[features]
+default = ["std"]
+std = []
+alloc = []
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true

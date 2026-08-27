@@ -70,7 +70,10 @@ mod tests {
         let methane = db.index_of("methane").unwrap();
         let water = db.index_of("water").unwrap();
         // Methane (light) should have a larger K than water (heavy) at 300 K, 1 bar.
-        assert!(k[methane] > k[water], "light component should be more volatile");
+        assert!(
+            k[methane] > k[water],
+            "light component should be more volatile"
+        );
     }
 
     #[test]

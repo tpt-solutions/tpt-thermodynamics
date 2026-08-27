@@ -34,6 +34,10 @@
 //! ```
 
 #![cfg_attr(not(feature = "std"), no_std)]
+// Index loops over `i`/`j` for matrix and root access are clearer than iterator
+// rewrites here; `needless_range_loop` is a false positive for double-indexed
+// access and is allowed crate-wide.
+#![allow(clippy::needless_range_loop)]
 
 extern crate alloc;
 

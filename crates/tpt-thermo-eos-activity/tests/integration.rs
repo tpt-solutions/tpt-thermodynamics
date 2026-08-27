@@ -1,6 +1,7 @@
 //! Cross-crate integration test: `tpt-thermo-eos-cubic`'s Huron-Vidal mixing
 //! rule consuming an activity model from this crate via the core
 //! [`ExcessGibbsModel`] trait object.
+#![allow(clippy::needless_range_loop)]
 
 use tpt_thermo_core::quantities::{MolarVolume, Pressure, Temperature};
 use tpt_thermo_core::EquationOfState;

@@ -10,7 +10,11 @@ use tpt_thermo_core::R;
 /// mole fraction `x_solid = 1 − x`? No — this returns the *liquid-phase* solute
 /// mole fraction `x` (the solubility). At `T = T_m` it is 1 (fully miscible);
 /// below `T_m` it falls below 1.
-pub fn solid_liquid_solubility(t_melt: Temperature, dh_fus: tpt_thermo_core::quantities::MolarEnergy, t: Temperature) -> f64 {
+pub fn solid_liquid_solubility(
+    t_melt: Temperature,
+    dh_fus: tpt_thermo_core::quantities::MolarEnergy,
+    t: Temperature,
+) -> f64 {
     let tm = t_melt.value;
     let tt = t.value;
     if tt <= 0.0 || tm <= 0.0 {
@@ -36,8 +40,8 @@ pub fn solid_liquid_solubility_tdependent(
         return 0.0;
     }
     let dhm = dh_fus.value + dc_p * (tt - tm);
-    let term = (-dhm / (R * tt)) * (1.0 / tt - 1.0 / tm)
-        + (dc_p / R) * ((tt / tm).ln() - (1.0 - tm / tt));
+    let term =
+        (-dhm / (R * tt)) * (1.0 / tt - 1.0 / tm) + (dc_p / R) * ((tt / tm).ln() - (1.0 - tm / tt));
     term.exp().clamp(0.0, 1.0)
 }
 

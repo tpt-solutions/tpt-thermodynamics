@@ -8,10 +8,10 @@ use crate::trial_compositions;
 use alloc::vec;
 use alloc::vec::Vec;
 use tpt_thermo_core::quantities::{MolarEnergy, Pressure, Temperature};
+use tpt_thermo_core::R;
 use tpt_thermo_core::{
     ComponentDatabase, EquationOfState, StabilityResult, StabilityTest, ThermoError,
 };
-use tpt_thermo_core::R;
 use tpt_thermo_eos_cubic::cubic_solver::Phase;
 use uom::si::molar_energy::joule_per_mole;
 
@@ -41,7 +41,14 @@ impl<'a, E: EquationOfState + ?Sized> TangentPlaneDistance<'a, E> {
         p: Pressure,
         z: Vec<f64>,
     ) -> Self {
-        Self { eos, volume, db, t, p, z }
+        Self {
+            eos,
+            volume,
+            db,
+            t,
+            p,
+            z,
+        }
     }
 
     /// Fugacity coefficients of a trial composition at the requested phase volume.
@@ -119,7 +126,9 @@ impl<'a, E: EquationOfState + ?Sized> TangentPlaneDistance<'a, E> {
         if n <= 1 {
             return Some(w0.to_vec());
         }
-        let mut x: Vec<f64> = (0..n - 1).map(|i| (w0[i] / w0[n - 1].max(1e-12)).ln()).collect();
+        let mut x: Vec<f64> = (0..n - 1)
+            .map(|i| (w0[i] / w0[n - 1].max(1e-12)).ln())
+            .collect();
         let mut w = w_from_x(&x);
         let mut tpd_best = self.tpd(&w, ln_phi_ref, trial_phase)?;
         for _ in 0..NEWTON_MAX_ITER {
@@ -282,10 +291,13 @@ impl<'a, E: EquationOfState + Send + Sync + ?Sized> StabilityTest for StabilityA
         if composition.len() != self.eos.num_components() {
             return Err(ThermoError::InvalidInput("composition length mismatch"));
         }
-        let calc = TangentPlaneDistance::new(self.eos, self.volume, self.db, t, p, composition.to_vec());
+        let calc =
+            TangentPlaneDistance::new(self.eos, self.volume, self.db, t, p, composition.to_vec());
         let mut stable = true;
         let mut trials = Vec::new();
-        for (ref_phase, trial_phase) in [(Phase::Vapor, Phase::Liquid), (Phase::Liquid, Phase::Vapor)] {
+        for (ref_phase, trial_phase) in
+            [(Phase::Vapor, Phase::Liquid), (Phase::Liquid, Phase::Vapor)]
+        {
             if let Some(sol) = calc.minimize(ref_phase, trial_phase) {
                 if sol.tpd < -TPD_TOL {
                     stable = false;
@@ -313,16 +325,17 @@ impl<'a, E: EquationOfState + Send + Sync + ?Sized> StabilityTest for StabilityA
         } else {
             Phase::Liquid
         };
-        let v = self
-            .volume
-            .phase_volume(t, p, x, phase)
-            .ok_or_else(|| {
-                ThermoError::Numerical(tpt_thermo_core::ConvergenceStatus::NumericalIssue(
-                    tpt_thermo_core::NumericalIssueReason::NonPhysical,
-                ))
-            })?;
+        let v = self.volume.phase_volume(t, p, x, phase).ok_or_else(|| {
+            ThermoError::Numerical(tpt_thermo_core::ConvergenceStatus::NumericalIssue(
+                tpt_thermo_core::NumericalIssueReason::NonPhysical,
+            ))
+        })?;
         let terms: Result<Vec<f64>, ThermoError> = (0..x.len())
-            .map(|i| self.eos.ln_fugacity_coefficient(t, v, x, i).map(|ln| x[i] * ln))
+            .map(|i| {
+                self.eos
+                    .ln_fugacity_coefficient(t, v, x, i)
+                    .map(|ln| x[i] * ln)
+            })
             .collect();
         let g: f64 = terms?.into_iter().sum();
         Ok(MolarEnergy::new::<joule_per_mole>(R * t.value * g))
@@ -369,7 +382,9 @@ mod tests {
         let v = BrentPhaseVolume::new(&eos)
             .phase_volume(t, p, &z, Phase::Vapor)
             .unwrap();
-        let pp = eos.pressure(t, MolarVolume::new::<cubic_meter_per_mole>(v.value), &z).unwrap();
+        let pp = eos
+            .pressure(t, MolarVolume::new::<cubic_meter_per_mole>(v.value), &z)
+            .unwrap();
         assert!((pp.value - p.value).abs() / p.value < 1e-6);
     }
 }

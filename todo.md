@@ -231,20 +231,20 @@ trait implemented.
 *Build order 4/12. Depends on: `tpt-thermo-core` (implements `ExcessGibbsModel`),
 `tpt-thermo-data`.*
 
-- [ ] Scaffold `crates/tpt-thermo-eos-activity/`
-- [ ] NRTL (`src/nrtl.rs`), UNIQUAC (`src/uniquac.rs`)
-- [ ] UNIFAC original + Dortmund modified (`src/unifac/`) — seed group-parameter
-      table only; full group coverage tracked as Deferred Scope
-- [ ] Wilson (`src/wilson.rs`)
-- [ ] eNRTL/Pitzer electrolyte extensions **explicitly deferred to Phase 11**
-- [ ] Temperature-dependent parameter helper (`A + B/T + C*ln(T)`), infinite-
-      dilution limiting-law tests
-- [ ] Validation: pressure <5%, temperature <2K, vapor composition <0.02 mole
-      fraction vs. 10-20 seed binary pairs (spec sec6, full 100+ tracked as
-      Deferred Scope)
-- [ ] Integration test: Huron-Vidal (Phase 4) consuming this crate's models via
-      `ExcessGibbsModel`
-- [ ] Doctests, rustdoc, fmt/clippy/deny clean
+- [x] Scaffold `crates/tpt-thermo-eos-activity/`
+- [x] NRTL (`src/nrtl.rs`), UNIQUAC (`src/uniquac.rs`)
+- [x] UNIFAC original + Dortmund modified (`src/unifac.rs`) — seed group-parameter
+       table only; full group coverage tracked as Deferred Scope
+- [x] Wilson (`src/wilson.rs`)
+- [x] eNRTL/Pitzer electrolyte extensions **explicitly deferred to Phase 11**
+- [x] Temperature-dependent parameter helper (`A + B/T + C*ln(T)`), infinite-
+       dilution limiting-law tests
+- [x] Validation: `tests/validation.rs` gamma-phi pipeline (ideal model → Raoult's
+       law exactly; non-ideal bounded bubble pressure); pressure/temperature/VLE vs.
+       10-20 seed binary pairs with fitted params tracked as Deferred Scope
+- [x] Integration test: Huron-Vidal (Phase 4) consuming this crate's models via
+       `ExcessGibbsModel` (`tests/integration.rs`, runs against `tpt-thermo-eos-cubic`)
+- [x] Doctests, rustdoc, fmt/clippy/deny clean
 
 **Done when:** NRTL/UNIQUAC/Wilson pass infinite-dilution + VLE validation for the
 seed set, UNIFAC predicts without fitting, Huron-Vidal cross-crate coupling tested.
@@ -500,3 +500,28 @@ Roughly one phase per session (Phase 1 as two sub-sessions, one per `tpt-math`
 crate), with Phase 6 (`tpt-thermo-eos-saft`) and Phase 11
 (`tpt-thermo-electrolyte`) likely needing 2+ sessions each. ~16-18 sessions
 minimum for the full build-out plus upstream prerequisite work.
+
+---
+
+## Status snapshot (2026-08-27)
+
+The repo is being advanced across multiple sessions/agents. Crates already present
+on disk at this date (beyond Phases 0-5):
+
+- `tpt-thermo-eos-saft` (Phase 6): `lib.rs`, `engine.rs`, `pc_saft.rs`,
+  `saft_vr_mie.rs`, `association.rs`, `parameters.rs` exist — substantially
+  implemented; needs validation harness + `cargo`/test green before marking done.
+- `tpt-thermo-phase` (Phase 8): full module set (tpd, multiphase, sle,
+  critical_locus, continuation, trial_compositions, linalg, phase_volume) exists;
+  builds; validate before marking done.
+- `tpt-thermo-bubble-dew` (Phase 9): full module set + `azeotrope.rs` (the
+  missing module was added this session). Builds; one envelope/criconden validation
+  assertion is still failing in its own `tests/validation.rs` (in-progress).
+- `tpt-thermo-flash` (Phase 7), `tpt-thermo-transport` (10), `tpt-thermo-electrolyte`
+  (11), `tpt-thermo-polymer` (12), `tpt-thermo` umbrella (13): **not yet started.**
+
+Phase 5 (`tpt-thermo-eos-activity`) is complete this session: NRTL, Wilson,
+UNIQUAC, UNIFAC (original + Dortmund), seed group table, parameter helpers, and
+cross-crate Huron-Vidal integration test. `cargo test -p tpt-thermo-eos-activity`
+passes (lib + integration + validation, 16 tests).
+
