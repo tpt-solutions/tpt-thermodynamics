@@ -33,12 +33,7 @@ pub struct Equilibrium {
 /// phases), or `-1.0` when the mixture is single-phase. The gap collapses to
 /// zero at the two-phase boundary, giving a sign-changing (negative↔positive)
 /// scalar that Brent's method roots to locate bubble/dew points.
-pub fn phase_gap(
-    eos: &dyn KProvider,
-    t: Temperature,
-    p: Pressure,
-    z: &[f64],
-) -> f64 {
+pub fn phase_gap(eos: &dyn KProvider, t: Temperature, p: Pressure, z: &[f64]) -> f64 {
     let vl: MolarVolume = match eos.phase_volume(t, p, z, Phase::Liquid) {
         Ok(v) => v,
         Err(_) => return -1.0,
@@ -80,7 +75,7 @@ pub fn equilibrate(
     for _ in 0..100 {
         let v_l = eos.phase_volume(t, p, &liquid, Phase::Liquid)?;
         let v_v = eos.phase_volume(t, p, &vapor, Phase::Vapor)?;
-        for i in 0..n {
+        for (i, ki) in k.iter_mut().enumerate() {
             let phi_l = (eos.ln_fugacity_coefficient(t, v_l, &liquid, i)?).exp();
             let phi_v = (eos.ln_fugacity_coefficient(t, v_v, &vapor, i)?).exp();
             if phi_v <= 0.0 {
@@ -88,7 +83,7 @@ pub fn equilibrate(
                     NumericalIssueReason::NonPhysical,
                 )));
             }
-            k[i] = phi_l / phi_v;
+            *ki = phi_l / phi_v;
         }
 
         match kind {

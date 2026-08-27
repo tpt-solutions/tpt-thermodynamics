@@ -82,7 +82,7 @@ pub fn mixture_critical_point<E: EquationOfState + ?Sized>(
     let v0 = 0.25 * R * t.value / guess.p.value.max(1.0);
     let mut v = MolarVolume::new::<cubic_meter_per_mole>(v0.max(1e-6));
     for _ in 0..400 {
-        let pv = eos.dp_dv(t, v, z).map_err(|e| e)?;
+        let pv = eos.dp_dv(t, v, z)?;
         let pvv = d2p_dv2(eos, t, v, z);
         if !pv.is_finite() || !pvv.is_finite() {
             return Err(ThermoError::Numerical(
@@ -148,7 +148,7 @@ pub fn mixture_critical_point<E: EquationOfState + ?Sized>(
         // The critical point is a horizontal inflection, so the (v,T) Jacobian
         // is singular there; regularise with Levenberg–Marquardt damping.
         let f = [pv, pvv];
-        let (dv, dt) = damped_solve(&j, &f).ok_or_else(|| {
+        let (dv, dt) = damped_solve(&j, &f).ok_or({
             ThermoError::Numerical(tpt_thermo_core::ConvergenceStatus::NumericalIssue(
                 tpt_thermo_core::NumericalIssueReason::SingularJacobian,
             ))

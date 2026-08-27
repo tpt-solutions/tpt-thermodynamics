@@ -7,12 +7,11 @@
 //! pressure curve `P_bubble(x₁)` meets the dew-point pressure curve
 //! `P_dew(x₁)`; the crossing is the azeotrope.
 
-use crate::{BubbleDewSolver};
+use crate::BubbleDewSolver;
 use alloc::vec;
 use alloc::vec::Vec;
 use tpt_thermo_core::error::ThermoError;
 use tpt_thermo_core::quantities::{Pressure, Temperature};
-use uom::si::thermodynamic_temperature::kelvin;
 
 /// A detected azeotrope.
 #[derive(Debug, Clone)]
@@ -115,7 +114,9 @@ fn bisect(
         let mut x = vec![0.0f64; nc];
         x[0] = x1;
         x[1] = 1.0 - x1;
-        let pb = solver.bubble_point_pressure(t, &x).map(|b| b.pressure.value);
+        let pb = solver
+            .bubble_point_pressure(t, &x)
+            .map(|b| b.pressure.value);
         let mut y = vec![0.0f64; nc];
         y[0] = x1;
         y[1] = 1.0 - x1;
@@ -147,8 +148,10 @@ fn bisect(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tpt_thermo_core::quantities::Temperature;
     use tpt_thermo_data::SeedComponentDatabase;
     use tpt_thermo_eos_cubic::PengRobinson;
+    use uom::si::thermodynamic_temperature::kelvin;
 
     #[test]
     fn detector_runs_and_is_well_formed() {

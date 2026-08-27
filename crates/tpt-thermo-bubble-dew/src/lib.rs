@@ -63,12 +63,12 @@ pub mod envelope;
 pub mod equilibrium;
 pub mod kprovider;
 
-pub use azeotrope::{Azeotrope, detect_azeotrope};
+pub use azeotrope::{detect_azeotrope, Azeotrope};
 pub use bubble::BubblePoint;
-pub use cricondentherm::{Criconden, cricondenbar_cricondentherm};
+pub use cricondentherm::{cricondenbar_cricondentherm, Criconden};
 pub use dew::DewPoint;
-pub use envelope::{Envelope, EnvelopePoint, bubble_dew_envelope};
-pub use equilibrium::{Equilibrium, equilibrate, phase_gap, Kind};
+pub use envelope::{bubble_dew_envelope, Envelope, EnvelopePoint};
+pub use equilibrium::{equilibrate, phase_gap, Equilibrium, Kind};
 pub use kprovider::{KProvider, Phase};
 
 use tpt_thermo_core::component::ComponentDatabase;
@@ -157,11 +157,7 @@ impl<'a> BubbleDewSolver<'a> {
     /// Bubble-point temperature of liquid `x` at pressure `p`: the temperature
     /// where the incipient-phase K-values satisfy `Σ x_i K_i = 1`, located by
     /// root-solving `bubble_g` (see [`bubble_g`]).
-    pub(crate) fn boundary_temperature(
-        &self,
-        p: Pressure,
-        x: &[f64],
-    ) -> Result<f64, ThermoError> {
+    pub(crate) fn boundary_temperature(&self, p: Pressure, x: &[f64]) -> Result<f64, ThermoError> {
         let (mn, mx) = self.feed_tc(x);
         let (lo, hi) = (0.3 * mn, 1.2 * mx);
         let eos = self.eos;
@@ -172,7 +168,6 @@ impl<'a> BubbleDewSolver<'a> {
             lo,
             hi,
         )
-        
     }
 
     /// Dew-point temperature of vapor `y` at pressure `p`: the temperature where
@@ -192,7 +187,6 @@ impl<'a> BubbleDewSolver<'a> {
             lo,
             hi,
         )
-        
     }
 
     /// Bubble-point temperature with a supplied `t_guess` (continuation). The
@@ -237,11 +231,7 @@ impl<'a> BubbleDewSolver<'a> {
 
     /// Bubble-point pressure of liquid `x` at temperature `t`: root-solve
     /// `bubble_g` over pressure.
-    pub(crate) fn boundary_pressure(
-        &self,
-        t: Temperature,
-        x: &[f64],
-    ) -> Result<f64, ThermoError> {
+    pub(crate) fn boundary_pressure(&self, t: Temperature, x: &[f64]) -> Result<f64, ThermoError> {
         let (p_lo, p_hi) = self.p_bounds();
         let eos = self.eos;
         root_scalar(
@@ -251,7 +241,6 @@ impl<'a> BubbleDewSolver<'a> {
             p_lo,
             p_hi,
         )
-        
     }
 
     /// Dew-point pressure of vapor `y` at temperature `t`: root-solve `dew_g`.
@@ -269,7 +258,6 @@ impl<'a> BubbleDewSolver<'a> {
             p_lo,
             p_hi,
         )
-        
     }
 
     fn min_tc(&self) -> f64 {
@@ -307,8 +295,8 @@ impl<'a> BubbleDewSolver<'a> {
     fn feed_tc(&self, z: &[f64]) -> (f64, f64) {
         let mut mn = f64::INFINITY;
         let mut mx = 0.0_f64;
-        for i in 0..z.len().min(self.db.num_components()) {
-            if z[i] > 0.0 {
+        for (i, &zi) in z.iter().enumerate().take(self.db.num_components()) {
+            if zi > 0.0 {
                 if let Ok(tc) = self.db.critical_temperature(i) {
                     mn = mn.min(tc.value);
                     mx = mx.max(tc.value);
@@ -328,12 +316,7 @@ impl<'a> BubbleDewSolver<'a> {
 /// Incipient-phase bubble residual `Σ_i x_i K_i − 1` with `K_i = φ_i^L/φ_i^V`
 /// evaluated at the liquid (feed) composition `x`. Crosses zero at the bubble
 /// point. Returns `NaN` when either phase volume cannot be resolved.
-pub fn bubble_g(
-    eos: &dyn KProvider,
-    t: Temperature,
-    p: Pressure,
-    x: &[f64],
-) -> f64 {
+pub fn bubble_g(eos: &dyn KProvider, t: Temperature, p: Pressure, x: &[f64]) -> f64 {
     let vl = match eos.phase_volume(t, p, x, Phase::Liquid) {
         Ok(v) => v,
         Err(_) => return f64::NAN,
@@ -362,12 +345,7 @@ pub fn bubble_g(
 
 /// Incipient-phase dew residual `Σ_i y_i / K_i − 1` with `K_i = φ_i^L/φ_i^V`
 /// evaluated at the vapor (feed) composition `y`. Crosses zero at the dew point.
-pub fn dew_g(
-    eos: &dyn KProvider,
-    t: Temperature,
-    p: Pressure,
-    y: &[f64],
-) -> f64 {
+pub fn dew_g(eos: &dyn KProvider, t: Temperature, p: Pressure, y: &[f64]) -> f64 {
     let vl = match eos.phase_volume(t, p, y, Phase::Liquid) {
         Ok(v) => v,
         Err(_) => return f64::NAN,
@@ -411,7 +389,11 @@ where
         var += step;
         let fv = f(var);
         if fprev.is_finite() && fv.is_finite() && fprev * fv <= 0.0 {
-            let (a, b) = if vprev <= var { (vprev, var) } else { (var, vprev) };
+            let (a, b) = if vprev <= var {
+                (vprev, var)
+            } else {
+                (var, vprev)
+            };
             return tpt_thermo_core::bisection(|v: f64| f(v), a, b, 1e-7, 200)
                 .map_err(ThermoError::Numerical);
         }
@@ -458,7 +440,11 @@ where
         }
         let fv = f(var);
         if fprev.is_finite() && fv.is_finite() && fprev * fv <= 0.0 {
-            let (c, d) = if vprev <= var { (vprev, var) } else { (var, vprev) };
+            let (c, d) = if vprev <= var {
+                (vprev, var)
+            } else {
+                (var, vprev)
+            };
             return tpt_thermo_core::bisection(|v: f64| f(v), c, d, 1e-7, 200)
                 .map_err(ThermoError::Numerical);
         }

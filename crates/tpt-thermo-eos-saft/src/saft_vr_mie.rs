@@ -63,12 +63,7 @@ impl EquationOfState for SaftVrMie {
     fn num_components(&self) -> usize {
         self.0.num_components()
     }
-    fn pressure(
-        &self,
-        t: Temperature,
-        v: MolarVolume,
-        z: &[f64],
-    ) -> Result<Pressure, ThermoError> {
+    fn pressure(&self, t: Temperature, v: MolarVolume, z: &[f64]) -> Result<Pressure, ThermoError> {
         self.0.pressure(t, v, z)
     }
     fn ln_fugacity_coefficient(

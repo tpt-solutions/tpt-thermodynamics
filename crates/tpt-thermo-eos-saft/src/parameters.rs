@@ -120,7 +120,13 @@ impl AssociationScheme {
 /// re-fitting. Diameters are Ångström, energies are `ε/k` in kelvin.
 pub const SEED_SAFT_PARAMETERS: &[SaftComponent] = &[
     SaftComponent::pc_saft_assoc(
-        "water", 1.2047, 3.8331, 366.51, AssociationScheme::TwoSite, 2500.7, 0.04544,
+        "water",
+        1.2047,
+        3.8331,
+        366.51,
+        AssociationScheme::TwoSite,
+        2500.7,
+        0.04544,
     ),
     SaftComponent::pc_saft("carbon dioxide", 2.0729, 3.1869, 207.89),
     SaftComponent::pc_saft("methane", 1.0000, 3.7039, 150.03),
@@ -139,16 +145,40 @@ pub const SEED_SAFT_PARAMETERS: &[SaftComponent] = &[
     SaftComponent::pc_saft("benzene", 2.4659, 3.6996, 286.94),
     SaftComponent::pc_saft("toluene", 2.8149, 3.7169, 297.51),
     SaftComponent::pc_saft_assoc(
-        "ethanol", 2.3827, 3.6458, 218.16, AssociationScheme::TwoSite, 3306.5, 0.00865,
+        "ethanol",
+        2.3827,
+        3.6458,
+        218.16,
+        AssociationScheme::TwoSite,
+        3306.5,
+        0.00865,
     ),
     SaftComponent::pc_saft_assoc(
-        "methanol", 1.5255, 3.2307, 219.91, AssociationScheme::TwoSite, 2925.4, 0.03514,
+        "methanol",
+        1.5255,
+        3.2307,
+        219.91,
+        AssociationScheme::TwoSite,
+        2925.4,
+        0.03514,
     ),
     SaftComponent::pc_saft_assoc(
-        "ammonia", 1.6215, 3.2368, 231.73, AssociationScheme::ThreeSite, 1607.4, 0.01081,
+        "ammonia",
+        1.6215,
+        3.2368,
+        231.73,
+        AssociationScheme::ThreeSite,
+        1607.4,
+        0.01081,
     ),
     SaftComponent::pc_saft_assoc(
-        "hydrogen sulfide", 1.4682, 3.4102, 269.45, AssociationScheme::TwoSite, 1025.3, 0.02330,
+        "hydrogen sulfide",
+        1.4682,
+        3.4102,
+        269.45,
+        AssociationScheme::TwoSite,
+        1025.3,
+        0.02330,
     ),
     SaftComponent::pc_saft("ethylene", 1.5505, 3.4453, 206.12),
     SaftComponent::pc_saft("propylene", 1.9169, 3.5357, 223.02),
@@ -201,12 +231,7 @@ impl SaftParameters {
                     let pc = db.critical_pressure(i)?.value;
                     let vc = 0.08664 * tpt_thermo_core::R * tc / pc; // cubic v_c estimate (m³/mol)
                     let sigma = (vc / (tpt_thermo_core::R * tc / pc) * 1.0).cbrt().max(2.5);
-                    SaftComponent::pc_saft(
-                        "estimated",
-                        (tc / 1.0).clamp(0.8, 6.0),
-                        sigma,
-                        tc * 0.6,
-                    )
+                    SaftComponent::pc_saft("estimated", (tc / 1.0).clamp(0.8, 6.0), sigma, tc * 0.6)
                 }
             };
             out.push(comp);

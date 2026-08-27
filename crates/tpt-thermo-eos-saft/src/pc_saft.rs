@@ -1,7 +1,7 @@
 //! PC-SAFT (perturbed-chain SAFT, Gross & Sadowski 2001).
 //!
 //! [`PcSaft`] is the primary SAFT model of this crate: hard-chain + dispersion
-//! + association implemented over the shared [`SaftEngine`]. Build it from the
+//! association implemented over the shared [`SaftEngine`]. Build it from the
 //! seed database or directly from [`SaftParameters`].
 
 use crate::engine::{SaftEngine, SaftFlavor};
@@ -24,7 +24,10 @@ impl PcSaft {
 
     /// Build from the seed database (SAFT parameters + molar masses by name).
     pub fn from_seed_database(db: &dyn ComponentDatabase) -> Result<Self, ThermoError> {
-        Ok(Self(SaftEngine::from_seed_database(db, SaftFlavor::PcSaft)?))
+        Ok(Self(SaftEngine::from_seed_database(
+            db,
+            SaftFlavor::PcSaft,
+        )?))
     }
 
     /// Attach a binary interaction matrix `k_ij`.
@@ -56,12 +59,7 @@ impl EquationOfState for PcSaft {
     fn num_components(&self) -> usize {
         self.0.num_components()
     }
-    fn pressure(
-        &self,
-        t: Temperature,
-        v: MolarVolume,
-        z: &[f64],
-    ) -> Result<Pressure, ThermoError> {
+    fn pressure(&self, t: Temperature, v: MolarVolume, z: &[f64]) -> Result<Pressure, ThermoError> {
         self.0.pressure(t, v, z)
     }
     fn ln_fugacity_coefficient(

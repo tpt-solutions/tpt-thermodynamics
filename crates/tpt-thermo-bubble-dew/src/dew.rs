@@ -1,7 +1,7 @@
 //! Dew-point calculations: find `T` at fixed `P`, and find `P` at fixed `T`.
 
 use crate::equilibrium::Kind;
-use crate::{BubbleDewSolver, one_atm};
+use crate::{one_atm, BubbleDewSolver};
 use alloc::vec::Vec;
 use tpt_thermo_core::error::ThermoError;
 use tpt_thermo_core::quantities::{Pressure, Temperature};
@@ -27,11 +27,7 @@ pub struct DewPoint {
 impl<'a> BubbleDewSolver<'a> {
     /// Dew-point temperature of a vapor composition `y` at pressure `p`:
     /// the highest temperature at which a liquid phase appears.
-    pub fn dew_point_temperature(
-        &self,
-        p: Pressure,
-        y: &[f64],
-    ) -> Result<DewPoint, ThermoError> {
+    pub fn dew_point_temperature(&self, p: Pressure, y: &[f64]) -> Result<DewPoint, ThermoError> {
         let td = self.boundary_temperature_dew(p, y)?;
         let t = Temperature::new::<kelvin>(td);
         let eq = self.equilibrium_at(t, p, y, Kind::Dew)?;
@@ -47,11 +43,7 @@ impl<'a> BubbleDewSolver<'a> {
 
     /// Dew-point pressure of a vapor composition `y` at temperature `t`:
     /// the lowest pressure at which a liquid phase appears.
-    pub fn dew_point_pressure(
-        &self,
-        t: Temperature,
-        y: &[f64],
-    ) -> Result<DewPoint, ThermoError> {
+    pub fn dew_point_pressure(&self, t: Temperature, y: &[f64]) -> Result<DewPoint, ThermoError> {
         let pd = self.boundary_pressure_dew(t, y)?;
         let p = Pressure::new::<pascal>(pd);
         let eq = self.equilibrium_at(t, p, y, Kind::Dew)?;

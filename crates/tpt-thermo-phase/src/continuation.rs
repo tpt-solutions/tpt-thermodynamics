@@ -59,9 +59,7 @@ where
                 a[r][c] = jf[r][c];
             }
         }
-        for c in 0..m {
-            a[m - 1][c] = t[c];
-        }
+        a[m - 1][..m].copy_from_slice(&t[..m]);
         let b: Vec<f64> = fy
             .iter()
             .chain(core::iter::once(&arc))

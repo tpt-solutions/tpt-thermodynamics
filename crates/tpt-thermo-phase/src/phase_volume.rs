@@ -96,7 +96,7 @@ impl PhaseVolume for BrentPhaseVolume<'_> {
         z: &[f64],
         phase: Phase,
     ) -> Option<MolarVolume> {
-        solve_generic(self.eos, t, p, z, phase).map(|v| MolarVolume::new::<cubic_meter_per_mole>(v))
+        solve_generic(self.eos, t, p, z, phase).map(MolarVolume::new::<cubic_meter_per_mole>)
     }
 }
 

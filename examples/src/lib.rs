@@ -72,14 +72,12 @@ pub mod phase2 {
 /// over the curated seed set.
 pub mod phase4 {
     use tpt_thermo_core::component::ComponentDatabase;
-    use tpt_thermo_core::quantities::{MolarVolume, Pressure, Temperature};
+    use tpt_thermo_core::quantities::{Pressure, Temperature};
     use tpt_thermo_core::EquationOfState;
     use tpt_thermo_data::SeedComponentDatabase;
     use tpt_thermo_eos_cubic::cubic_solver::Phase;
     use tpt_thermo_eos_cubic::PengRobinson;
-    use uom::si::{
-        molar_volume::cubic_meter_per_mole, pressure::pascal, thermodynamic_temperature::kelvin,
-    };
+    use uom::si::{pressure::pascal, thermodynamic_temperature::kelvin};
 
     fn db() -> SeedComponentDatabase {
         SeedComponentDatabase::from_seed()

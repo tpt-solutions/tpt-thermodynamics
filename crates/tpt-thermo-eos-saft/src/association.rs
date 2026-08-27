@@ -54,7 +54,7 @@ fn delta_ij(params: &SaftParameters, i: usize, j: usize, t: f64, zeta_3: f64) ->
     let sigma_ij = 0.5 * (ci.sigma + cj.sigma) * 1.0e-10; // Å → m
     let eps_ab = 0.5 * (ai.epsilon_ab_k + aj.epsilon_ab_k); // K, arithmetic mean
     let kappa = (ai.kappa_ab * aj.kappa_ab).sqrt(); // geometric mean
-    // Radial distribution at contact (mixture packing fraction).
+                                                    // Radial distribution at contact (mixture packing fraction).
     let g = (1.0 - 0.5 * zeta_3) / (1.0 - zeta_3).powi(3);
     let boltz = (eps_ab / t).exp() - 1.0;
     g * sigma_ij.powi(3) * kappa * boltz
@@ -154,10 +154,11 @@ pub fn solve_association(
             }
             rhs[i] = -f[i];
         }
-        let dx = solve_linear(&jac, &rhs, n)
-            .map_err(|_| ConvergenceStatus::NumericalIssue(
+        let dx = solve_linear(&jac, &rhs, n).map_err(|_| {
+            ConvergenceStatus::NumericalIssue(
                 tpt_thermo_core::convergence::NumericalIssueReason::SingularJacobian,
-            ))?;
+            )
+        })?;
         let mut max_step: f64 = 0.0;
         for i in 0..n {
             if sites[i] == 0 {
@@ -193,14 +194,12 @@ pub fn solve_association(
         ares += x[i] * sites[i] as f64 * (xv[i].ln() + 0.5 * (1.0 - xv[i]));
     }
 
-    Ok(AssociationResult {
-        x_nondim: xv,
-        ares,
-    })
+    Ok(AssociationResult { x_nondim: xv, ares })
 }
 
 /// Solve a small dense linear system `A x = b` by Gaussian elimination with
 /// partial pivoting.
+#[allow(clippy::needless_range_loop)]
 fn solve_linear(a: &[Vec<f64>], b: &[f64], n: usize) -> Result<Vec<f64>, ()> {
     let mut m = vec![vec![0.0_f64; n]; n];
     let mut rhs = b.to_vec();

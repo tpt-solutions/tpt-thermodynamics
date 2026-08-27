@@ -144,13 +144,17 @@ impl SaftEngine {
     /// Reduced residual Helmholtz energy `a^res/(RT)` at `(T, v, x)`.
     pub fn ares(&self, t: f64, v: f64, x: &[f64]) -> Result<f64, ThermoError> {
         let (rho, zeta3, _d) = self.packing(t, v, x);
-        if zeta3 >= 0.9999 || zeta3 < 0.0 {
+        if !(0.0..0.9999).contains(&zeta3) {
             return Err(ThermoError::Numerical(ConvergenceStatus_::NumericalIssue(
                 NumericalIssueReason::NonPhysical,
             )));
         }
         // Hard-chain (Carnahan-Starling one-fluid).
-        let m_mix: f64 = x.iter().zip(self.params.components.iter()).map(|(xi, c)| xi * c.m).sum();
+        let m_mix: f64 = x
+            .iter()
+            .zip(self.params.components.iter())
+            .map(|(xi, c)| xi * c.m)
+            .sum();
         let g_hs = (1.0 - 0.5 * zeta3) / (1.0 - zeta3).powi(3);
         let ahs = (4.0 * zeta3 - 3.0 * zeta3 * zeta3) / (1.0 - zeta3).powi(2);
         let ahc = m_mix * ahs - (m_mix - 1.0) * g_hs.ln();
@@ -262,13 +266,10 @@ impl SaftEngine {
             let old = xp[i];
             xp[i] = (old + step).min(1.0);
             // Renormalise so the sum stays 1.
-            let mut sum = 0.0;
-            for k in 0..n {
-                sum += xp[k];
-            }
+            let sum: f64 = xp.iter().sum();
             if (sum - 1.0).abs() > 1e-12 {
-                for k in 0..n {
-                    xp[k] /= sum;
+                for xi in xp.iter_mut() {
+                    *xi /= sum;
                 }
             }
             let a = self.ares(t, v, xp.as_slice())?;
@@ -346,9 +347,7 @@ impl SaftEngine {
         let v_min = 1e-7_f64;
         let v_max = 2.0_f64;
         let npts = 6000_usize;
-        let f = |v: f64| -> f64 {
-            self.volume_pressure(t, v, x).unwrap_or(f64::INFINITY) - p
-        };
+        let f = |v: f64| -> f64 { self.volume_pressure(t, v, x).unwrap_or(f64::INFINITY) - p };
         let mut roots = Vec::new();
         let mut prev_v = v_min;
         let mut prev_f = f(prev_v);
@@ -393,12 +392,7 @@ impl EquationOfState for SaftEngine {
         self.num_components()
     }
 
-    fn pressure(
-        &self,
-        t: Temperature,
-        v: MolarVolume,
-        x: &[f64],
-    ) -> Result<Pressure, ThermoError> {
+    fn pressure(&self, t: Temperature, v: MolarVolume, x: &[f64]) -> Result<Pressure, ThermoError> {
         let p = self.pressure_value(t.value, v.value, x)?;
         Ok(Pressure::new::<pascal>(p))
     }
@@ -514,7 +508,11 @@ impl SaftEngine {
     fn cp_cv(&self, t: f64, v: f64, x: &[f64]) -> Result<(f64, f64), ThermoError> {
         let dt = t.abs().max(1.0) * 1e-3;
         let u = |tt: f64| -> Result<f64, ThermoError> {
-            let hv = self.molar_enthalpy(Temperature::new::<kelvin>(tt), MolarVolume::new::<cubic_meter_per_mole>(v), x)?;
+            let hv = self.molar_enthalpy(
+                Temperature::new::<kelvin>(tt),
+                MolarVolume::new::<cubic_meter_per_mole>(v),
+                x,
+            )?;
             let p = self.pressure_value(tt, v, x)?;
             let zc = p * v / (R * tt);
             Ok(hv.value - (zc - 1.0) * R * tt)
@@ -550,7 +548,9 @@ impl SaftEngine {
 
 /// PC-SAFT dispersion integral `I_1(η, ξ)` (Gross & Sadowski 2001, Table 1).
 fn i1(eta: f64, xi: f64) -> f64 {
-    let a = [0.910_283, 0.824_035, -1.737_244, -2.670_485, 3.044_772, -1.154_127];
+    let a = [
+        0.910_283, 0.824_035, -1.737_244, -2.670_485, 3.044_772, -1.154_127,
+    ];
     let xi2 = xi * xi;
     let poly = a[0] + a[1] * xi + a[2] * xi2;
     let rat = (a[3] + a[4] * xi + a[5] * xi2) / (1.0 - eta);
@@ -559,7 +559,9 @@ fn i1(eta: f64, xi: f64) -> f64 {
 
 /// PC-SAFT dispersion integral `I_2(η, ξ)` (Gross & Sadowski 2001, Table 1).
 fn i2(eta: f64, xi: f64) -> f64 {
-    let b = [-0.333_369, -0.309_373, 2.315_052, -3.454_927, 2.126_189, -0.603_327];
+    let b = [
+        -0.333_369, -0.309_373, 2.315_052, -3.454_927, 2.126_189, -0.603_327,
+    ];
     let xi2 = xi * xi;
     let poly = b[0] + b[1] * xi + b[2] * xi2;
     let rat = (b[3] + b[4] * xi + b[5] * xi2) / (1.0 - eta);

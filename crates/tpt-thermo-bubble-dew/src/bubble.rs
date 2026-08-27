@@ -1,7 +1,7 @@
 //! Bubble-point calculations: find `T` at fixed `P`, and find `P` at fixed `T`.
 
 use crate::equilibrium::Kind;
-use crate::{BubbleDewSolver, one_atm};
+use crate::{one_atm, BubbleDewSolver};
 use alloc::vec::Vec;
 use tpt_thermo_core::error::ThermoError;
 use tpt_thermo_core::quantities::{Pressure, Temperature};

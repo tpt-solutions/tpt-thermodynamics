@@ -8,8 +8,8 @@
 //! quantitative agreement with experiment for every polar pair.
 
 use tpt_thermo_bubble_dew::{
-    Azeotrope, BubbleDewSolver, BubblePoint, Criconden, DewPoint, KProvider,
-    bubble_dew_envelope, cricondenbar_cricondentherm, detect_azeotrope,
+    bubble_dew_envelope, cricondenbar_cricondentherm, detect_azeotrope, Azeotrope, BubbleDewSolver,
+    BubblePoint, Criconden, DewPoint, KProvider,
 };
 use tpt_thermo_core::quantities::{Pressure, Temperature};
 use tpt_thermo_data::SeedComponentDatabase;

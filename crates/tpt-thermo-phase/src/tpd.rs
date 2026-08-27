@@ -325,7 +325,7 @@ impl<'a, E: EquationOfState + Send + Sync + ?Sized> StabilityTest for StabilityA
         } else {
             Phase::Liquid
         };
-        let v = self.volume.phase_volume(t, p, x, phase).ok_or_else(|| {
+        let v = self.volume.phase_volume(t, p, x, phase).ok_or({
             ThermoError::Numerical(tpt_thermo_core::ConvergenceStatus::NumericalIssue(
                 tpt_thermo_core::NumericalIssueReason::NonPhysical,
             ))
