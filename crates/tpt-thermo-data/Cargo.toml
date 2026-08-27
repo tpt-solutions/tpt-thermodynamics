@@ -1,0 +1,25 @@
+[package]
+name = "tpt-thermo-data"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Curated component dataset, ComponentDatabase impl, and BIP tables for tpt-thermodynamics."
+
+[dependencies]
+tpt-thermo-core = { path = "../tpt-thermo-core" }
+uom = { workspace = true, default-features = false, features = ["si", "f32", "f64", "autoconvert"] }
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+serde_json = "1"
+
+[features]
+default = ["std"]
+std = []
+alloc = []
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true

@@ -1,0 +1,26 @@
+[package]
+name = "tpt-thermo-eos-cubic"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Cubic equations of state (Peng-Robinson, SRK, volume-translated) with classical and excess-Gibbs mixing rules for tpt-thermodynamics."
+
+[dependencies]
+tpt-thermo-core = { path = "../tpt-thermo-core" }
+tpt-thermo-data = { path = "../tpt-thermo-data" }
+tpt-math-numeric = { workspace = true, default-features = false, features = ["alloc", "libm"] }
+tpt-math-units = { workspace = true, default-features = false, features = ["alloc"] }
+uom = { workspace = true, default-features = false, features = ["si", "f32", "f64", "autoconvert"] }
+typenum = "1"
+
+[features]
+default = ["std"]
+std = []
+alloc = []
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true

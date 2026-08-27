@@ -3,6 +3,9 @@ resolver = "2"
 members = [
     "xtask",
     "examples",
+    "crates/tpt-thermo-core",
+    "crates/tpt-thermo-data",
+    "crates/tpt-thermo-eos-cubic",
 ]
 exclude = []
 
@@ -20,12 +23,13 @@ repository = "https://github.com/tpt-solutions/tpt-thermodynamics"
 
 # Upstream substrate — consumed as crates.io version strings, matching how every
 # other tpt-* repo cross-depends (not path/git deps across repo boundaries).
-tpt-math-numeric = "0.1.0"
-tpt-math-units = "0.1.0"
+tpt-math-numeric = { version = "0.1.0", default-features = false }
+tpt-math-units = { version = "0.1.0", default-features = false }
 tpt-math-optimize-general = "0.1.0"
 tpt-math-optimize-convex = "0.1.0"
 tpt-math-linalg = "0.1.0"
 tpt-eng-props = "0.1.1"
+uom = { version = "0.38", default-features = false }
 
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "warn"

@@ -1,0 +1,295 @@
+# Curated seed component dataset for tpt-thermodynamics.
+#
+# Values are critical constants (Tc in K, Pc in Pa), the Pitzer acentric
+# factor omega, and the molar mass (kg/mol), sourced from the NIST Chemistry
+# WebBook / Poling, Prausnitz & O'Connell, "The Properties of Gases and Liquids"
+# (5th ed., 2001). This is a *seed* set (~24 compounds); the full 2000+ dataset
+# is tracked as Deferred Scope in todo.md.
+
+[[components]]
+schema_version = 1
+name = "water"
+formula = "H2O"
+cas = "7732-18-5"
+critical_temperature_k = 647.096
+critical_pressure_pa = 22064000.0
+acentric_factor = 0.344
+molar_mass_kg_per_mol = 0.01801528
+normal_boiling_point_k = 373.15
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "carbon dioxide"
+formula = "CO2"
+cas = "124-38-9"
+critical_temperature_k = 304.1282
+critical_pressure_pa = 7377000.0
+acentric_factor = 0.22394
+molar_mass_kg_per_mol = 0.0440095
+normal_boiling_point_k = 216.58
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "methane"
+formula = "CH4"
+cas = "74-82-8"
+critical_temperature_k = 190.564
+critical_pressure_pa = 4599200.0
+acentric_factor = 0.011
+molar_mass_kg_per_mol = 0.01604303
+normal_boiling_point_k = 111.66
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "ethane"
+formula = "C2H6"
+cas = "74-84-0"
+critical_temperature_k = 305.322
+critical_pressure_pa = 4872200.0
+acentric_factor = 0.099
+molar_mass_kg_per_mol = 0.03006904
+normal_boiling_point_k = 184.55
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "propane"
+formula = "C3H8"
+cas = "74-98-6"
+critical_temperature_k = 369.83
+critical_pressure_pa = 4248000.0
+acentric_factor = 0.152
+molar_mass_kg_per_mol = 0.04409562
+normal_boiling_point_k = 231.08
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "n-butane"
+formula = "C4H10"
+cas = "106-97-8"
+critical_temperature_k = 425.12
+critical_pressure_pa = 3796000.0
+acentric_factor = 0.199
+molar_mass_kg_per_mol = 0.05812218
+normal_boiling_point_k = 272.66
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "n-pentane"
+formula = "C5H12"
+cas = "109-66-0"
+critical_temperature_k = 469.7
+critical_pressure_pa = 3370000.0
+acentric_factor = 0.251
+molar_mass_kg_per_mol = 0.07214878
+normal_boiling_point_k = 309.21
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "n-hexane"
+formula = "C6H14"
+cas = "110-54-3"
+critical_temperature_k = 507.6
+critical_pressure_pa = 3025000.0
+acentric_factor = 0.296
+molar_mass_kg_per_mol = 0.08617536
+normal_boiling_point_k = 341.88
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "n-heptane"
+formula = "C7H16"
+cas = "142-82-5"
+critical_temperature_k = 540.2
+critical_pressure_pa = 2736000.0
+acentric_factor = 0.35
+molar_mass_kg_per_mol = 0.1002025
+normal_boiling_point_k = 371.58
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "n-octane"
+formula = "C8H18"
+cas = "111-65-9"
+critical_temperature_k = 568.7
+critical_pressure_pa = 2490000.0
+acentric_factor = 0.398
+molar_mass_kg_per_mol = 0.1142297
+normal_boiling_point_k = 398.82
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "nitrogen"
+formula = "N2"
+cas = "7727-37-9"
+critical_temperature_k = 126.192
+critical_pressure_pa = 3395800.0
+acentric_factor = 0.0372
+molar_mass_kg_per_mol = 0.0280134
+normal_boiling_point_k = 77.36
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "oxygen"
+formula = "O2"
+cas = "7782-44-7"
+critical_temperature_k = 154.581
+critical_pressure_pa = 5043000.0
+acentric_factor = 0.0222
+molar_mass_kg_per_mol = 0.0319988
+normal_boiling_point_k = 90.20
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "hydrogen"
+formula = "H2"
+cas = "1333-74-0"
+critical_temperature_k = 33.145
+critical_pressure_pa = 1296400.0
+acentric_factor = -0.216
+molar_mass_kg_per_mol = 0.00201588
+normal_boiling_point_k = 20.27
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "argon"
+formula = "Ar"
+cas = "7440-37-1"
+critical_temperature_k = 150.687
+critical_pressure_pa = 4863000.0
+acentric_factor = 0.0
+molar_mass_kg_per_mol = 0.039948
+normal_boiling_point_k = 87.30
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "helium"
+formula = "He"
+cas = "7440-59-7"
+critical_temperature_k = 5.1953
+critical_pressure_pa = 227460.0
+acentric_factor = -0.365
+molar_mass_kg_per_mol = 0.004002602
+normal_boiling_point_k = 4.22
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "benzene"
+formula = "C6H6"
+cas = "71-43-2"
+critical_temperature_k = 562.05
+critical_pressure_pa = 4894000.0
+acentric_factor = 0.210
+molar_mass_kg_per_mol = 0.07811184
+normal_boiling_point_k = 353.25
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "toluene"
+formula = "C7H8"
+cas = "108-88-3"
+critical_temperature_k = 591.79
+critical_pressure_pa = 4108000.0
+acentric_factor = 0.257
+molar_mass_kg_per_mol = 0.09213842
+normal_boiling_point_k = 383.79
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "ethanol"
+formula = "C2H6O"
+cas = "64-17-5"
+critical_temperature_k = 514.0
+critical_pressure_pa = 6137000.0
+acentric_factor = 0.644
+molar_mass_kg_per_mol = 0.04606844
+normal_boiling_point_k = 351.45
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "methanol"
+formula = "CH4O"
+cas = "67-56-1"
+critical_temperature_k = 512.6
+critical_pressure_pa = 8084000.0
+acentric_factor = 0.566
+molar_mass_kg_per_mol = 0.03204186
+normal_boiling_point_k = 337.85
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "ammonia"
+formula = "NH3"
+cas = "7664-41-7"
+critical_temperature_k = 405.4
+critical_pressure_pa = 11333000.0
+acentric_factor = 0.256
+molar_mass_kg_per_mol = 0.01703052
+normal_boiling_point_k = 239.82
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "hydrogen sulfide"
+formula = "H2S"
+cas = "7783-06-4"
+critical_temperature_k = 373.1
+critical_pressure_pa = 8940000.0
+acentric_factor = 0.1
+molar_mass_kg_per_mol = 0.03408088
+normal_boiling_point_k = 212.95
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "ethylene"
+formula = "C2H4"
+cas = "74-85-1"
+critical_temperature_k = 282.34
+critical_pressure_pa = 5042000.0
+acentric_factor = 0.089
+molar_mass_kg_per_mol = 0.02805316
+normal_boiling_point_k = 169.45
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "propylene"
+formula = "C3H6"
+cas = "115-07-1"
+critical_temperature_k = 364.9
+critical_pressure_pa = 4600000.0
+acentric_factor = 0.148
+molar_mass_kg_per_mol = 0.04207968
+normal_boiling_point_k = 225.45
+source = "NIST / Poling et al. 2001"
+
+[[components]]
+schema_version = 1
+name = "hydrogen chloride"
+formula = "HCl"
+cas = "7647-01-0"
+critical_temperature_k = 324.65
+critical_pressure_pa = 8306000.0
+acentric_factor = 0.13
+molar_mass_kg_per_mol = 0.03646094
+normal_boiling_point_k = 188.15
+source = "NIST / Poling et al. 2001"

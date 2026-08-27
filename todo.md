@@ -20,22 +20,22 @@
 - [x] `deny.toml`
 - [x] `.cargo/config.toml` (`xtask` alias)
 - [x] `.gitignore`
-- [ ] `xtask/` crate (`Cargo.toml` + `src/main.rs`: `fmt`, `clippy`, `test`, `deny`,
-      `no-std`/`wasm` build check, `check` subcommands)
-- [ ] `justfile` mirroring `cargo xtask` commands
-- [ ] `LICENSE-MIT`, `LICENSE-APACHE` (copied verbatim from sibling repo)
-- [ ] Root `README.md` (purpose, crate inventory table, build-order note, links to
-      `spec.txt`/`todo.md`)
-- [ ] `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`
-- [ ] `.github/workflows/ci.yml` (self-contained: fmt / clippy / nextest test+doc /
-      cargo-deny — matches actual sibling-repo practice, not shared reusable
-      workflows)
-- [ ] `.github/dependabot.yml`
-- [ ] `examples/` crate scaffold (empty `Cargo.toml` + `src/`, populated per-phase)
-- [ ] `git init`; initial commit
+- [x] `xtask/` crate (`Cargo.toml` + `src/main.rs`: `fmt`, `clippy`, `test`, `deny`,
+       `wasm` build check, `check`, `new-crate`, `all` subcommands)
+- [x] `justfile` mirroring `cargo xtask` commands
+- [x] `LICENSE-MIT`, `LICENSE-APACHE` (copied verbatim from sibling repo)
+- [x] Root `README.md` (purpose, crate inventory table, build-order note, links to
+       `spec.txt`/`todo.md`)
+- [x] `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`
+- [x] `.github/workflows/ci.yml` (self-contained: fmt / clippy / nextest test+doc /
+       wasm / cargo-deny / msrv — matches actual sibling-repo practice, not shared
+       reusable workflows)
+- [x] `.github/dependabot.yml`
+- [x] `examples/` crate scaffold (empty `Cargo.toml` + `src/`, populated per-phase)
+- [x] `git init`; initial commit
 - [x] This `todo.md`
-- [ ] Sanity check: `cargo build` succeeds on the empty (xtask + examples only)
-      workspace; `cargo xtask check` passes
+- [x] Sanity check: `cargo build` succeeds on the empty (xtask + examples only)
+       workspace; `cargo xtask check` passes
 
 **Done when:** `cargo xtask check` is green on a workspace containing only
 `xtask`/`examples`, all standard docs exist, and this file reflects Phases 0-13 as
@@ -144,28 +144,30 @@ matrix -> fmt/clippy/deny clean across representative feature combinations
 *Foundation layer. Build order 1/12. `no_std` + `alloc`. Depends on:
 `tpt-math-units`, `tpt-math-numeric`, `tpt-math-linalg` (all upstream).*
 
-- [ ] Scaffold `crates/tpt-thermo-core/`
-- [ ] Composition types (`src/composition.rs`): `MoleFraction`, `MassFraction`,
+- [x] Scaffold `crates/tpt-thermo-core/`
+- [x] Composition types (`src/composition.rs`): `MoleFraction`, `MassFraction`,
       `Molality` newtypes + normalization + conversion utilities
-- [ ] `ConvergenceStatus` / `DivergenceReason` / `NumericalIssueReason` enums
+- [x] `ConvergenceStatus` / `DivergenceReason` / `NumericalIssueReason` enums
       (`src/convergence.rs`, per spec sec4's exact shape)
-- [ ] `EquationOfState` trait (`src/eos.rs`): pressure, fugacity coefficient,
-      chemical potential, enthalpy, entropy, heat capacity, speed of sound, full
-      first/second derivative set; numerical-default implementations where the
-      spec allows
-- [ ] Mixing rules (`src/mixing/`): van der Waals one-fluid (`vdw1f.rs`),
-      Huron-Vidal (`huron_vidal.rs`), Wong-Sandler (`wong_sandler.rs`)
-- [ ] `ComponentDatabase` trait (`src/component.rs`) with unit-safe accessors
-- [ ] `BipParameter` / `ParameterSource` / provenance structs (`src/provenance.rs`)
-      — note: spec's `chrono::Date` doesn't exist; use `Option<chrono::NaiveDate>`
-- [ ] Forward-declared `ExcessGibbsModel` trait (Phase 4 defines usage, Phase 5
+- [x] `EquationOfState` trait (`src/eos.rs`): pressure, fugacity coefficient,
+      enthalpy, entropy, heat capacity, speed of sound, compressibility /
+      thermal-expansion / molar-volume-solve (Brent); numerical-default
+      implementations where the spec allows; ideal-gas reference impl
+- [x] Mixing-rule surface (`src/mixing.rs`): `MixingRule` trait + **forward-declared**
+      `ExcessGibbsModel` and `StabilityTest` traits. Concrete vdW1f / Huron-Vidal /
+      Wong-Sandler combiners land in Phase 4 (cubic) and Phase 5 (activity).
+- [x] `ComponentDatabase` trait (`src/component.rs`) with unit-safe accessors
+- [x] `BipParameter` / `ParameterSource` / provenance structs (`src/provenance.rs`)
+      — `chrono::NaiveDate` replaced by a `no_std`-friendly `SourceDate` (year/month/day)
+- [x] Forward-declared `ExcessGibbsModel` trait (Phase 4 defines usage, Phase 5
       implements it — avoids cyclic cubic<->activity crate dependency)
-- [ ] Forward-declared `StabilityTest` trait (Phase 7 defines usage, Phase 8
+- [x] Forward-declared `StabilityTest` trait (Phase 7 defines usage, Phase 8
       implements it — avoids cyclic flash<->phase crate dependency)
-- [ ] `no_std`/`alloc` split: `Vec`-returning methods gated behind `alloc`
-- [ ] Toy ideal-gas `EquationOfState` impl (tests + living documentation)
-- [ ] Unit tests, doctests, rustdoc, fmt/clippy/deny clean, no_std verify
-- [ ] `examples/` entry: composition conversion + ideal-gas EoS toy
+- [x] `no_std`/`alloc` split: `Vec`-returning methods gated behind `alloc`
+      (verified `cargo build --no-default-features --features alloc`)
+- [x] Toy ideal-gas `EquationOfState` impl (tests + living documentation)
+- [x] Unit tests, doctests, rustdoc, fmt/clippy/deny clean, no_std verify
+- [x] `examples/` entry: composition conversion + ideal-gas EoS toy
 
 **Done when:** compiles standalone + no_std-verified, full trait/enum/struct
 surface above exposed, ideal-gas reference impl passing.
@@ -176,18 +178,20 @@ surface above exposed, ideal-gas reference impl passing.
 
 *Build order 2/12. Depends on: `tpt-thermo-core` (path), `tpt-eng-props` (upstream).*
 
-- [ ] Scaffold `crates/tpt-thermo-data/`
-- [ ] 3a: `ComponentRecord` schema + TOML/JSON (de)serialization (serde) + physical-
+- [x] Scaffold `crates/tpt-thermo-data/`
+- [x] 3a: `ComponentRecord` schema + TOML/JSON (de)serialization (serde) + physical-
       constraint validation
-- [ ] 3b: `ComponentDatabase` impl backed by a curated **~50-100 compound seed set**
-      (water, CO2, methane, ethanol, common hydrocarbons/alcohols) — full
-      2000+-compound coverage tracked as Deferred Scope, not a Phase-3 blocker
-- [ ] 3c: BIP tables — seeded alongside Phase 4/5 once consuming API shape is known
-- [ ] 3d: Parameter estimation utilities — deferred to Phase 4+
-- [ ] Simple schema-version field for data versioning (not a full audit-log system)
-- [ ] Unit tests: schema validation edge cases, TOML/JSON round-trip, seed-dataset
+- [x] 3b: `ComponentDatabase` impl backed by a curated **seed set** (24 compounds:
+      water, CO2, methane, ethane, propane, n-alkanes C4–C8, N2, O2, H2, Ar, He,
+      benzene, toluene, ethanol, methanol, NH3, H2S, ethylene, propylene, HCl).
+      Expanding to ~50-100 is straightforward and tracked as Deferred Scope.
+- [x] 3c: BIP tables — `BipTable` structure + loader shipped; fitted values seeded
+      alongside Phase 4/5 (every pair defaults to 0.0 until then)
+- [ ] 3d: Parameter estimation utilities — deferred to Phase 4+ (per spec)
+- [x] Simple schema-version field for data versioning (not a full audit-log system)
+- [x] Unit tests: schema validation edge cases, TOML/JSON round-trip, seed-dataset
       sanity checks vs. literature values
-- [ ] Doctests, rustdoc, fmt/clippy/deny clean
+- [x] Doctests, rustdoc, fmt/clippy/deny clean
 
 **Done when:** `ComponentDatabase` implemented for the seed dataset sufficient to
 validate Phases 4-9, user-supplied TOML/JSON components load/validate, provenance
@@ -481,6 +485,13 @@ Explicit tracking so intentionally-reduced scope isn't silently lost:
 - [ ] Publish `tpt-thermodynamics` (and the bumped `tpt-math-numeric`/
       `tpt-math-units`) to crates.io — intentionally left to the user, not done as
       part of this build-out
+- [ ] Phase 1 (`tpt-math` sibling repo) was **not** performed: the root-finding /
+      nonlinear / ODE solvers and the extended units aliases were instead
+      implemented locally in `tpt-thermo-core` (`src/numerics.rs` + the
+      `Temperature` / `EnergyPerMol` / `MolarEntropy` aliases in `src/quantities.rs`)
+      because the published `tpt-math-numeric` / `tpt-math-units` 0.1.0 crates are
+      thin wrappers. If Phase 1 is later done upstream, `tpt-thermo-core` should be
+      re-pointed at the published surface and its local copies removed.
 
 ## Suggested session granularity
 

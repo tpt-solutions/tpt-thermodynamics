@@ -1,0 +1,16 @@
+[package]
+name = "tpt-thermo-examples"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+# Per-phase example code pulls in the relevant in-workspace crates here as
+# each Phase 2-13 crate lands. Left intentionally minimal at bootstrap.
+tpt-thermo-core = { path = "../crates/tpt-thermo-core" }
+uom = { workspace = true, default-features = false, features = ["si", "f32", "f64", "autoconvert"] }
+
+[lints]
+workspace = true

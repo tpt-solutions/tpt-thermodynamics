@@ -1,0 +1,27 @@
+[package]
+name = "tpt-thermo-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Foundation layer for tpt-thermodynamics: EoS trait, composition, mixing rules, convergence."
+
+[dependencies]
+tpt-math-units = { workspace = true, default-features = false, features = ["alloc"] }
+tpt-math-numeric = { workspace = true, default-features = false, features = ["alloc", "libm"] }
+uom = { workspace = true, default-features = false, features = ["si", "f32", "f64", "autoconvert"] }
+# `uom` is the dimensional-analysis backend re-exported by `tpt-math-units`.
+# Adding it directly (with the same feature set `tpt-math-units` enables) lets
+# us name quantity/unit types; cargo unifies to the single published version.
+typenum = "1"
+
+[features]
+default = ["std"]
+std = []
+alloc = []
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true
