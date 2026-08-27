@@ -148,19 +148,27 @@ impl CubicEos {
         (amix, bmix, a, b)
     }
 
-    fn log_term(&self, z: f64, b: f64) -> (f64, f64) {
-        // Returns (coefficient, ln-term) for the fugacity / departure formulas.
-        match self.model {
+    fn log_term(&self, zc: f64, t: f64, bmix: f64, p: f64) -> (f64, f64) {
+        // Returns `(ln-term, B)` for the fugacity / residual-departure formulas,
+        // where `B = b_mix·P/(R T)` is the dimensionless co-volume. The
+        // attractive coefficient is supplied separately by [`attractive_coeff`].
+        let b = bmix * p / (R * t);
+        let logterm = match self.model {
             CubicModel::PengRobinson => {
-                let coef = 1.0 / (2.0 * SQRT2 * b);
-                let term = ((z + (1.0 + SQRT2) * b) / (z + (1.0 - SQRT2) * b)).ln();
-                (coef, term)
+                ((zc + (1.0 + SQRT2) * b) / (zc + (1.0 - SQRT2) * b)).ln()
             }
-            CubicModel::SoaveRedlichKwong => {
-                let coef = 1.0 / b;
-                let term = (1.0 + b / z).ln();
-                (coef, term)
-            }
+            CubicModel::SoaveRedlichKwong => (1.0 + b / zc).ln(),
+        };
+        (logterm, b)
+    }
+
+    /// Attractive-term coefficient `1/(2√2·b_mix·R T)` (PR) or `1/(b_mix·R T)`
+    /// (SRK), multiplied by the mixture `a_mix` (fugacity) or its temperature
+    /// derivative (residual enthalpy / entropy).
+    fn attractive_coeff(&self, bmix: f64, t: f64) -> f64 {
+        match self.model {
+            CubicModel::PengRobinson => 1.0 / (2.0 * SQRT2 * bmix * R * t),
+            CubicModel::SoaveRedlichKwong => 1.0 / (bmix * R * t),
         }
     }
 
@@ -338,9 +346,10 @@ impl EquationOfState for CubicEos {
         let zc = p * v_eos / (R * t.value);
         let bi = b[i];
         let sum = self.mixing.aij_sum(&a, &b, z, i, t.value, P_REF);
-        let (coef, logterm) = self.log_term(zc, bmix);
+        let (logterm, bd) = self.log_term(zc, t.value, bmix, p);
+        let coef = self.attractive_coeff(bmix, t.value);
         let term = 2.0 * sum / amix - bi / bmix;
-        let lnphi = bi / bmix * (zc - 1.0) - (zc - bmix).ln() - coef * amix * term * logterm;
+        let lnphi = bi / bmix * (zc - 1.0) - (zc - bd).ln() - coef * amix * term * logterm;
         Ok(lnphi)
     }
 
@@ -366,12 +375,13 @@ impl EquationOfState for CubicEos {
         let amix_p = self.mix_params(t.value + dt, z).0;
         let amix_m = self.mix_params(t.value - dt, z).0;
         let da_dt = (amix_p - amix_m) / (2.0 * dt);
-        let (coef, logterm) = self.log_term(zc, bmix);
-        // H^R = R T (Z - 1) + (T da/dT - a) · coef · logterm.
-        let h_res = R * t.value * (zc - 1.0) + (t.value * da_dt - amix) * coef * logterm;
-        eprintln!(
-            "Hdbg zc={zc} p={p} amix={amix} bmix={bmix} da_dt={da_dt} coef={coef} logterm={logterm}"
-        );
+        let (logterm, _bd) = self.log_term(zc, t.value, bmix, p);
+        // H^R = R T (Z - 1) + (T da/dT - a) / (2√2 b) · ln-term  (volume `b`).
+        let coef_h = match self.model {
+            CubicModel::PengRobinson => 1.0 / (2.0 * SQRT2 * bmix),
+            CubicModel::SoaveRedlichKwong => 1.0 / bmix,
+        };
+        let h_res = R * t.value * (zc - 1.0) + (t.value * da_dt - amix) * coef_h * logterm;
         // Peneloux volume-translation correction to internal energy, hence H.
         let h = h_res - p * self.c_mix(z);
         Ok(MolarEnergy::new::<joule_per_mole>(h))
@@ -398,9 +408,10 @@ impl EquationOfState for CubicEos {
         let amix_p = self.mix_params(t.value + dt, z).0;
         let amix_m = self.mix_params(t.value - dt, z).0;
         let da_dt = (amix_p - amix_m) / (2.0 * dt);
-        let (coef, logterm) = self.log_term(zc, bmix);
-        // S^R/R = ln(Z - B) + (da/dT) · coef · logterm - ln Z  (ideal-gas tail included below).
-        let s_res = (zc - bmix).ln() + da_dt * coef * logterm - zc.ln();
+        let (logterm, bd) = self.log_term(zc, t.value, bmix, p);
+        let coef = self.attractive_coeff(bmix, t.value);
+        // S^R/R = ln(Z - B) + (da/dT) · coef · T · logterm - ln Z.
+        let s_res = (zc - bd).ln() - zc.ln() + da_dt * coef * logterm;
         // Ideal-gas (reference) entropy: mixing + -ln(P/P_ref), with zero reference Cp.
         let mixing: f64 = -R
             * z.iter()

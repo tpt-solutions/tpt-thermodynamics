@@ -1,0 +1,27 @@
+[package]
+name = "tpt-thermo-phase"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Phase stability (tangent-plane distance), multiphase equilibrium, solid-liquid equilibrium, and mixture critical-point / arc-length-continuation tools for tpt-thermodynamics."
+
+[dependencies]
+tpt-thermo-core = { path = "../tpt-thermo-core" }
+tpt-thermo-data = { path = "../tpt-thermo-data" }
+tpt-thermo-eos-cubic = { path = "../tpt-thermo-eos-cubic" }
+tpt-math-numeric = { workspace = true, default-features = false, features = ["alloc", "libm"] }
+tpt-math-units = { workspace = true, default-features = false, features = ["alloc"] }
+uom = { workspace = true, default-features = false, features = ["si", "f32", "f64", "autoconvert"] }
+typenum = "1"
+
+[features]
+default = ["std"]
+std = []
+alloc = []
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true

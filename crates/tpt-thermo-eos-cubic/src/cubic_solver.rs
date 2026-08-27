@@ -93,9 +93,11 @@ pub fn cubic_real_roots(a: f64, b: f64, c: f64, d: f64) -> alloc::vec::Vec<f64> 
         let v = (-q / 2.0 - sqrt_disc).cbrt();
         roots.push(u + v + shift);
     } else {
-        // Three real roots.
+        // Three real roots. For the depressed cubic t³ + p t + q = 0, the
+        // substitution t = 2 r cos θ with r = √(-p/3) yields
+        // cos(3θ) = -q / (2 r³); the roots are θ_k = (acos(..) + 2πk)/3.
         let r = (-p / 3.0).max(0.0).sqrt();
-        let phi = (q / (2.0 * r * r * r).max(1e-300)).clamp(-1.0, 1.0).acos();
+        let phi = (-q / (2.0 * r * r * r).max(1e-300)).clamp(-1.0, 1.0).acos();
         for k in 0..3 {
             let theta = (phi + 2.0 * core::f64::consts::PI * k as f64) / 3.0;
             roots.push(2.0 * r * theta.cos() + shift);

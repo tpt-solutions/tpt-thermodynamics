@@ -10,6 +10,9 @@ publish = false
 # Per-phase example code pulls in the relevant in-workspace crates here as
 # each Phase 2-13 crate lands. Left intentionally minimal at bootstrap.
 tpt-thermo-core = { path = "../crates/tpt-thermo-core" }
+tpt-thermo-eos-cubic = { path = "../crates/tpt-thermo-eos-cubic" }
+tpt-thermo-bubble-dew = { path = "../crates/tpt-thermo-bubble-dew" }
+tpt-thermo-data = { path = "../crates/tpt-thermo-data" }
 uom = { workspace = true, default-features = false, features = ["si", "f32", "f64", "autoconvert"] }
 
 [lints]

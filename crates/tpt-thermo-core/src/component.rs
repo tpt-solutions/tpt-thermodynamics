@@ -8,7 +8,7 @@ use crate::error::ThermoError;
 use crate::quantities::{MolarMass, Pressure, Temperature};
 
 /// Read-only access to per-component physical constants and parameters.
-pub trait ComponentDatabase {
+pub trait ComponentDatabase: Send + Sync {
     /// Number of components in the database.
     fn num_components(&self) -> usize;
 

@@ -39,4 +39,6 @@ pub enum NumericalIssueReason {
     NonPhysical,
     /// A required parameter was missing.
     MissingParameter,
+    /// A division by (near-)zero occurred during the solve.
+    DivisionByZero,
 }

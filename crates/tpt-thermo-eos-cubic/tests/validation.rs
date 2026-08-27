@@ -73,11 +73,7 @@ fn pr_critical_point_finite_and_positive() {
     let eos = PengRobinson::from_database(&db()).unwrap();
     let methane = db().index_of("methane").unwrap();
     let (tc, pc, vc) = eos.critical_point_pure(methane).unwrap();
-    let p_check = eos.pressure(tc, vc, &unit(methane)).unwrap().value;
-    eprintln!(
-        "CRIT methane: Tc={} K, Pc={} Pa, vc={} m3/mol, eos.pressure={} Pa",
-        tc.value, pc.value, vc.value, p_check
-    );
+    let _p_check = eos.pressure(tc, vc, &unit(methane)).unwrap().value;
     assert!(tc.value > 0.0 && pc.value > 0.0 && vc.value > 0.0);
     let tc_seed = db().critical_temperature(methane).unwrap().value;
     let pc_seed = db().critical_pressure(methane).unwrap().value;
@@ -173,40 +169,52 @@ fn unit(i: usize) -> Vec<f64> {
 }
 
 /// Equal-fugacity vapor-pressure solver for a pure component.
+///
+/// `g_fug = ln φ_liquid − ln φ_vapor` rises to exactly `0` at the saturation
+/// pressure (where the two phases have equal fugacity) and is negative on either
+/// side, so the saturation pressure is the **maximiser** of `g_fug` over the
+/// two-phase region. A golden-section search on `g_fug` is robust for both
+/// components whose van der Waals loop extends to low pressure (e.g. methane)
+/// and those that do not (e.g. CO₂).
 fn vapor_pressure(eos: &PengRobinson, t: Temperature, i: usize) -> Option<f64> {
     let pc_val = db().critical_pressure(i).ok()?.value;
-    let steps = 200usize;
-    let p_lo = 1.0e3;
-    let p_hi = 0.95 * pc_val;
-    let mut prev_p = p_lo;
-    let mut prev_g = g_fug(eos, t, i, p_lo);
-    let mut bracket = None;
-    for k in 1..=steps {
-        let p = p_lo + (p_hi - p_lo) * (k as f64) / (steps as f64);
-        let g = g_fug(eos, t, i, p);
-        if let (Some(gp), Some(gprev)) = (g, prev_g) {
-            // Descending crossing: g goes from >0 (below Psat, vapor stable) to
-            // <0 (above Psat, liquid stable) exactly at saturation.
-            if gp <= 0.0 && gprev > 0.0 {
-                bracket = Some((prev_p, p));
-                break;
-            }
-        }
-        prev_p = p;
-        prev_g = g;
-    }
-    let (a, b) = bracket?;
+    let a = 1.0e3;
+    let b = 0.95 * pc_val;
+    // Outside the three-root (two-phase) region `g_fug` is undefined; treat it
+    // as −∞ so the maximiser stays inside the physical two-phase region.
+    let g = |p: f64| -> f64 { g_fug(eos, t, i, p).unwrap_or(f64::NEG_INFINITY) };
+    let invphi = (5.0_f64.sqrt() - 1.0) / 2.0;
     let mut lo = a;
     let mut hi = b;
-    for _ in 0..60 {
-        let mid = 0.5 * (lo + hi);
-        match g_fug(eos, t, i, mid) {
-            Some(g) if g > 0.0 => lo = mid,
-            Some(_) => hi = mid,
-            None => break,
+    let mut x1 = lo + (1.0 - invphi) * (hi - lo);
+    let mut x2 = lo + invphi * (hi - lo);
+    let mut f1 = g(x1);
+    let mut f2 = g(x2);
+    for _ in 0..200 {
+        if f1 > f2 {
+            hi = x2;
+            x2 = x1;
+            f2 = f1;
+            x1 = lo + (1.0 - invphi) * (hi - lo);
+            f1 = g(x1);
+        } else {
+            lo = x1;
+            x1 = x2;
+            f1 = f2;
+            x2 = lo + invphi * (hi - lo);
+            f2 = g(x2);
+        }
+        if (hi - lo) / (b - a) < 1e-7 {
+            break;
         }
     }
-    Some(0.5 * (lo + hi))
+    let p_sat = 0.5 * (lo + hi);
+    // Sanity: the maximiser must actually be in the two-phase region.
+    if g_fug(eos, t, i, p_sat).is_some() {
+        Some(p_sat)
+    } else {
+        None
+    }
 }
 
 /// `ln φ_liquid − ln φ_vapor` at `(T, P)`; `None` if not in the two-phase region.
@@ -236,9 +244,5 @@ fn enthalpy_of_vaporization(eos: &PengRobinson, t: Temperature, i: usize) -> f64
     let v_v = eos.solve_phase(t, p, &unit(i), Phase::Vapor).unwrap();
     let h_l = eos.molar_enthalpy(t, v_l, &unit(i)).unwrap().value;
     let h_v = eos.molar_enthalpy(t, v_v, &unit(i)).unwrap().value;
-    eprintln!(
-        "Hvap dbg: psat={psat} v_l={} v_v={} Z_l={} Z_v={} h_l={h_l} h_v={h_v}",
-        v_l.value, v_v.value, psat * v_l.value / (R * t.value), psat * v_v.value / (R * t.value)
-    );
     h_v - h_l
 }

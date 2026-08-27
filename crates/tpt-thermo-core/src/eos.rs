@@ -128,7 +128,7 @@ impl StateBuilder {
 /// `pressure` and `ln_fugacity_coefficient` are required (each model supplies
 /// its own closure relation); the remaining methods have numerical-default
 /// implementations where the spec permits, computed from `pressure`.
-pub trait EquationOfState {
+pub trait EquationOfState: Send + Sync {
     /// Number of components the model describes.
     fn num_components(&self) -> usize;
 

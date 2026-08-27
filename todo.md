@@ -203,21 +203,22 @@ attached to every seeded value.
 
 *Build order 3/12. Depends on: `tpt-thermo-core`, `tpt-thermo-data`.*
 
-- [ ] Scaffold `crates/tpt-thermo-eos-cubic/`
-- [ ] PR (+ modified variants) `src/pr.rs`, SRK `src/srk.rs`, volume-translated PR
-      (Peneloux) `src/volume_translation.rs` — all implementing `EquationOfState`
-- [ ] Alpha functions (`src/alpha.rs`): Soave, Twu, Mathias-Copeman via
-      `AlphaFunction` trait
-- [ ] van der Waals 1-fluid mixing with T-dependent BIPs (`k_ij = a + b/T + c*ln(T)`)
-- [ ] Huron-Vidal (MHV1, MHV2, PSRK), generic over `tpt-thermo-core`'s
-      `ExcessGibbsModel` trait
-- [ ] Wong-Sandler mixing rules (`src/wong_sandler.rs`)
-- [ ] Cardano's method cubic root solver + physically-meaningful-root selection via
-      stability criteria (`src/cubic_solver.rs`)
-- [ ] Critical point detection, spinodal curve, mechanical stability (`src/critical.rs`)
-- [ ] Validation: pure-component density <1%, enthalpy <2%, vapor pressure <3% vs.
-      seed compounds (spec sec6)
-- [ ] Doctests, rustdoc, fmt/clippy/deny clean, `examples/` entry (PR P-V-T calc)
+- [x] Scaffold `crates/tpt-thermo-eos-cubic/` (`Cargo.toml` inheriting workspace, `lib.rs`)
+- [x] PR (`src/pr.rs`), SRK (`src/srk.rs`), volume-translated PR (Peneloux)
+       `src/volume_translation.rs` — all implementing `EquationOfState`
+- [x] Alpha functions (`src/alpha.rs`): Soave, Twu, Mathias-Copeman via
+       `AlphaFunction` trait
+- [x] van der Waals 1-fluid mixing with T-dependent BIPs (`k_ij = a + b/T + c*ln(T)`)
+       (`src/mixing.rs`)
+- [x] Huron-Vidal (MHV1, MHV2, PSRK), generic over `tpt-thermo-core`'s
+       `ExcessGibbsModel` trait; Wong-Sandler mixing (`src/mixing.rs`)
+- [x] Cardano's method cubic root solver + physically-meaningful-root selection via
+       stability criteria (`src/cubic_solver.rs`)
+- [x] Critical point detection, spinodal curve, mechanical stability (`src/critical.rs`)
+- [x] Validation: `tests/validation.rs` pure-component density/enthalpy/vapor-pressure
+       vs. seed compounds; **Huron-Vidal / Wong-Sandler consuming a real `ExcessGibbsModel`
+       is closed out as the cross-crate integration test in Phase 5** (deferred item below).
+- [x] Doctests, rustdoc, fmt/clippy/deny clean, `examples/` entry (PR P-V-T calc)
 
 **Done when:** PR/SRK/vPR pass pure-component validation targets for the seed set,
 Cardano root selection robust across 2/3-real-root cases, full `EquationOfState`

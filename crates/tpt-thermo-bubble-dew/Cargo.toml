@@ -1,0 +1,23 @@
+[package]
+name = "tpt-thermo-bubble-dew"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Bubble/dew point, phase-envelope, azeotrope and criconden detection for tpt-thermodynamics (EOS-driven)."
+
+[dependencies]
+tpt-thermo-core = { path = "../tpt-thermo-core" }
+tpt-thermo-eos-cubic = { path = "../tpt-thermo-eos-cubic" }
+tpt-thermo-data = { path = "../tpt-thermo-data" }
+uom = { workspace = true, default-features = false, features = ["si", "f32", "f64", "autoconvert"] }
+
+[features]
+default = ["std"]
+std = []
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true

@@ -6,6 +6,10 @@ members = [
     "crates/tpt-thermo-core",
     "crates/tpt-thermo-data",
     "crates/tpt-thermo-eos-cubic",
+    "crates/tpt-thermo-eos-activity",
+    "crates/tpt-thermo-eos-saft",
+    "crates/tpt-thermo-eos-activity",
+    "crates/tpt-thermo-bubble-dew",
 ]
 exclude = []
 
