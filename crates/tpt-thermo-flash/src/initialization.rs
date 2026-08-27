@@ -23,12 +23,12 @@ pub fn wilson_k_values(
     let tk = if t_kelvin > 0.0 { t_kelvin } else { 1.0 };
     let p_val = p.value.max(1.0);
     let mut k = alloc::vec![1.0_f64; nc];
-    for i in 0..nc {
+    for (i, ki) in k.iter_mut().enumerate() {
         let tc = db.critical_temperature(i)?.value;
         let pc = db.critical_pressure(i)?.value;
         let omega = db.acentric_factor(i)?;
         let exponent = 5.3727 * (1.0 + omega) * (1.0 - tc / tk);
-        k[i] = (pc / p_val) * exponent.exp();
+        *ki = (pc / p_val) * exponent.exp();
     }
     Ok(k)
 }

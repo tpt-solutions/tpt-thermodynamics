@@ -124,10 +124,10 @@ impl<'a, E: EquationOfState + ?Sized> FlashCalculator<'a, E> {
         let vv = phase_volume(self.eos, t, p, y, Phase::Vapor)?;
         let n = x.len();
         let mut k = alloc::vec![0.0_f64; n];
-        for i in 0..n {
+        for (i, ki) in k.iter_mut().enumerate() {
             let phil = (self.eos.ln_fugacity_coefficient(t, vl, x, i)?).exp();
             let phiv = (self.eos.ln_fugacity_coefficient(t, vv, y, i)?).exp();
-            k[i] = if phiv > 0.0 { phil / phiv } else { 1.0 };
+            *ki = if phiv > 0.0 { phil / phiv } else { 1.0 };
         }
         Ok(k)
     }
@@ -204,6 +204,7 @@ fn relative_change(a: &[f64], b: &[f64]) -> f64 {
 
 /// Core PT flash implementation, shared by [`FlashCalculator::flash_pt`] and the
 /// convenience free function.
+#[allow(clippy::too_many_arguments)]
 pub fn flash_pt_impl<E: EquationOfState + ?Sized>(
     eos: &E,
     db: Option<&dyn ComponentDatabase>,
@@ -271,10 +272,10 @@ fn eos_k_values<E: EquationOfState + ?Sized>(
     let vv = phase_volume(eos, t, p, y, Phase::Vapor)?;
     let n = x.len();
     let mut k = alloc::vec![0.0_f64; n];
-    for i in 0..n {
+    for (i, ki) in k.iter_mut().enumerate() {
         let phil = (eos.ln_fugacity_coefficient(t, vl, x, i)?).exp();
         let phiv = (eos.ln_fugacity_coefficient(t, vv, y, i)?).exp();
-        k[i] = if phiv > 0.0 { phil / phiv } else { 1.0 };
+        *ki = if phiv > 0.0 { phil / phiv } else { 1.0 };
     }
     Ok(k)
 }

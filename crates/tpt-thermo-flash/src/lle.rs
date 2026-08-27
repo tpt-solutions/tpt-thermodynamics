@@ -68,10 +68,10 @@ pub fn lle_isoactivity(
     for it in 0..max_iter {
         // K_i = gamma_ii / gamma_i
         let mut k = alloc::vec![1.0_f64; n];
-        for i in 0..n {
+        for (i, ki) in k.iter_mut().enumerate() {
             let gln_i = model.ln_gamma(t, p, &x_i, i)?;
             let gln_ii = model.ln_gamma(t, p, &x_ii, i)?;
-            k[i] = (gln_ii - gln_i).exp();
+            *ki = (gln_ii - gln_i).exp();
         }
         let rr = rachford_rice(&k, z)?;
         beta = rr.beta.clamp(0.0, 1.0);

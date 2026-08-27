@@ -54,8 +54,8 @@ pub fn liquid_thermal_conductivity(
     }
     let mut sum = 0.0_f64;
     let mut total = 0.0_f64;
-    for i in 0..n {
-        if z[i] <= 0.0 {
+    for (i, &zi) in z.iter().enumerate() {
+        if zi <= 0.0 {
             continue;
         }
         let tc = db.critical_temperature(i)?.value;
@@ -72,8 +72,8 @@ pub fn liquid_thermal_conductivity(
         let lambda_i =
             (tc.powf(5.0 / 6.0) / (m_g.sqrt() * pc_bar.powf(2.0 / 3.0))) * 0.227
                 * (1.0 - tr).powf(0.38);
-        sum += z[i] * lambda_i;
-        total += z[i];
+        sum += zi * lambda_i;
+        total += zi;
     }
     if total <= 0.0 {
         return Err(ThermoError::InvalidInput("no positive mole fractions"));

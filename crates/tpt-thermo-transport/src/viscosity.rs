@@ -86,8 +86,8 @@ pub fn lucas_liquid_viscosity(
     }
     let mut eta_mix = 0.0_f64;
     let mut total = 0.0_f64;
-    for i in 0..n {
-        if z[i] <= 0.0 {
+    for (i, &zi) in z.iter().enumerate() {
+        if zi <= 0.0 {
             continue;
         }
         let tc = db.critical_temperature(i)?.value;
@@ -113,8 +113,8 @@ pub fn lucas_liquid_viscosity(
         let pr = p.value / 1.0e5 / pc_bar.max(1e-6);
         let f_p = 1.0 + pr * 0.1;
         let eta_i = eta_star * f_t * f_omega * f_p; // mPa·s
-        eta_mix += z[i] * eta_i;
-        total += z[i];
+        eta_mix += zi * eta_i;
+        total += zi;
     }
     if total <= 0.0 {
         return Err(ThermoError::InvalidInput("no positive mole fractions"));

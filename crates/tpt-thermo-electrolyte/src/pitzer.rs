@@ -106,8 +106,9 @@ mod tests {
         assert!((got - expected).abs() < 1e-15, "got {got}, expected {expected}");
         // Debye–Hückel limiting law: ln γ± → −A_γ·√I = −3·A_φ·√I as I → 0.
         assert!((got + 3.0 * A_PHI_25C * i.sqrt()).abs() < 1e-9);
-        // Osmotic coefficient tends to 1.
-        assert!((osmotic_coefficient(&p, m, 1.0, -1.0) - 1.0).abs() < 1e-9);
+        // Osmotic coefficient with no virial terms equals 1 + f^φ(I)·|z⁺z⁻|.
+        let phi = osmotic_coefficient(&p, m, 1.0, -1.0);
+        assert!((phi - (1.0 + f_phi(i))).abs() < 1e-15);
     }
 
     #[test]

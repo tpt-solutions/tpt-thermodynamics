@@ -131,7 +131,7 @@ pub(crate) fn flash_ph_impl<E: EquationOfState + ?Sized>(
         let t = Temperature::new::<kelvin>(tk);
         let r = flash_pt_impl(eos, db, nc, t, p_clone, z, crate::pt::PT_MAX_ITER, crate::pt::PT_TOL)?;
         let res = mix_enthalpy(eos, t, &r)
-            .map_err(|e| FlashError::Thermo(e))?;
+            .map_err(FlashError::Thermo)?;
         Ok((res - target, r))
     })
 }
@@ -157,7 +157,7 @@ pub(crate) fn flash_pu_impl<E: EquationOfState + ?Sized>(
         let t = Temperature::new::<kelvin>(tk);
         let r = flash_pt_impl(eos, db, nc, t, p_clone, z, crate::pt::PT_MAX_ITER, crate::pt::PT_TOL)?;
         let res = mix_internal_energy(eos, t, p_clone, &r)
-            .map_err(|e| FlashError::Thermo(e))?;
+            .map_err(FlashError::Thermo)?;
         Ok((res - target, r))
     })
 }
@@ -208,7 +208,7 @@ pub(crate) fn flash_ts_impl<E: EquationOfState + ?Sized>(
         let p = Pressure::new::<uom::si::pressure::pascal>(pk);
         let r = flash_pt_impl(eos, db, nc, t_clone, p, z, crate::pt::PT_MAX_ITER, crate::pt::PT_TOL)?;
         let res = mix_entropy(eos, t_clone, &r)
-            .map_err(|e| FlashError::Thermo(e))?;
+            .map_err(FlashError::Thermo)?;
         Ok((res - target, r))
     })
 }
