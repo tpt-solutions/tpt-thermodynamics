@@ -3,7 +3,7 @@
 //! provides the long-range term exactly (Debye–Hückel) and a parameterised
 //! short-range term; the short-range parameters are fitted per system.
 
-use crate::pitzer::{f_gamma, ionic_strength, A_PHI_25C};
+use crate::pitzer::{f_gamma, A_PHI_25C};
 
 /// eNRTL parameters: Debye–Hückel slope `a_phi`, ion-size `b`, and the
 /// short-range NRTL `tau`/`alpha` for the ion pair.

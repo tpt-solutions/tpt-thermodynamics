@@ -1,7 +1,6 @@
 //! Thermal-conductivity correlations: Chung et al. (1988) gas and a
 //! corresponding-states liquid estimate, with Filippov mixing.
 
-use alloc::vec::Vec;
 use tpt_thermo_core::component::ComponentDatabase;
 use tpt_thermo_core::error::ThermoError;
 use tpt_thermo_core::quantities::{Pressure, Temperature, ThermalConductivity};

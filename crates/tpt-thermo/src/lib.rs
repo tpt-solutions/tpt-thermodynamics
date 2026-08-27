@@ -21,7 +21,7 @@
 //! | `flash`      | `flash`                    | `tpt-thermo-flash`       |
 //! | `transport`  | `transport`                | `tpt-thermo-transport`   |
 //! | `electrolyte`| `electrolyte`              | `tpt-thermo-electrolyte` |
-//! | `polymer`    | `polymer`                  | `tpt-thermo-polymer`     |
+//! | `polymer`    | `polymer`                  | `tpt-thermo-polymer`     | *(pending Phase 12)*
 //!
 //! `cargo build --no-default-features` yields only `core` + `data`; each feature
 //! builds standalone and `--all-features` builds them all.
@@ -45,8 +45,8 @@ pub use tpt_thermo_flash as flash;
 pub use tpt_thermo_transport as transport;
 #[cfg(feature = "electrolyte")]
 pub use tpt_thermo_electrolyte as electrolyte;
-#[cfg(feature = "polymer")]
-pub use tpt_thermo_polymer as polymer;
+// #[cfg(feature = "polymer")]
+// pub use tpt_thermo_polymer as polymer;
 
 pub mod api;
 pub mod error;

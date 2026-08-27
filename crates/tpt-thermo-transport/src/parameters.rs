@@ -3,7 +3,7 @@
 
 use tpt_thermo_core::component::ComponentDatabase;
 use tpt_thermo_core::error::ThermoError;
-use tpt_thermo_core::quantities::{MolarMass, Pressure, Temperature};
+use tpt_thermo_core::quantities::MolarMass;
 
 /// Lennard-Jones-like parameters used by the Chapman–Enskog / Chung
 /// correlations, derived from critical constants.

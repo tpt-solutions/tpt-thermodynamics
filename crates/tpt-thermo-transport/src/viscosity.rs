@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use tpt_thermo_core::component::ComponentDatabase;
 use tpt_thermo_core::error::ThermoError;
 use tpt_thermo_core::quantities::{DynamicViscosity, MolarMass, Pressure, Temperature};
-use uom::si::dynamic_viscosity::{pascal_second, micropascal_second};
+use uom::si::dynamic_viscosity::pascal_second;
 use uom::si::molar_volume::cubic_meter_per_mole;
 use uom::si::pressure::bar;
 use uom::si::thermodynamic_temperature::kelvin;

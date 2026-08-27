@@ -5,7 +5,6 @@ use tpt_thermo_core::component::ComponentDatabase;
 use tpt_thermo_core::error::ThermoError;
 use tpt_thermo_core::quantities::{DiffusionCoefficient, Pressure, Temperature};
 use uom::si::diffusion_coefficient::square_meter_per_second;
-use uom::si::pressure::pascal;
 
 /// Fuller–Schettler–Giddings diffusion volume `Σv` (cm³·mol⁻¹)^(1/3)-scale) for a
 /// named component. Covers the seed set; unknown names fall back to a rough

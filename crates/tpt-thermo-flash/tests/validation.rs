@@ -95,7 +95,6 @@ fn ph_flash_matches_target_enthalpy() {
 
 #[test]
 fn lle_isoactivity_splits_nonideal_binary() {
-    use tpt_thermo_core::mixing::ExcessGibbsModel;
     use tpt_thermo_eos_activity::{parameters::TdParam, Nrtl};
     use tpt_thermo_flash::lle::lle_isoactivity;
     use uom::si::pressure::pascal;
