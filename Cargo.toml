@@ -12,6 +12,7 @@ members = [
     "crates/tpt-thermo-bubble-dew",
     "crates/tpt-thermo-flash",
     "crates/tpt-thermo-transport",
+    "crates/tpt-thermo-polymer",
     "crates/tpt-thermo",
 ]
 exclude = []
