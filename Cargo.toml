@@ -8,9 +8,11 @@ members = [
     "crates/tpt-thermo-eos-cubic",
     "crates/tpt-thermo-eos-activity",
     "crates/tpt-thermo-eos-saft",
-    "crates/tpt-thermo-eos-activity",
     "crates/tpt-thermo-phase",
     "crates/tpt-thermo-bubble-dew",
+    "crates/tpt-thermo-flash",
+    "crates/tpt-thermo-transport",
+    "crates/tpt-thermo",
 ]
 exclude = []
 

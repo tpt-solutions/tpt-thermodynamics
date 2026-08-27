@@ -1,0 +1,40 @@
+[package]
+name = "tpt-thermo"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Umbrella crate unifying the tpt-thermodynamics EoS, flash, phase, transport and property crates behind a flat feature tree."
+
+[dependencies]
+tpt-thermo-core = { path = "../tpt-thermo-core" }
+tpt-thermo-data = { path = "../tpt-thermo-data" }
+
+tpt-thermo-eos-cubic = { path = "../tpt-thermo-eos-cubic", optional = true }
+tpt-thermo-eos-activity = { path = "../tpt-thermo-eos-activity", optional = true }
+tpt-thermo-eos-saft = { path = "../tpt-thermo-eos-saft", optional = true }
+tpt-thermo-phase = { path = "../tpt-thermo-phase", optional = true }
+tpt-thermo-bubble-dew = { path = "../tpt-thermo-bubble-dew", optional = true }
+tpt-thermo-flash = { path = "../tpt-thermo-flash", optional = true }
+tpt-thermo-transport = { path = "../tpt-thermo-transport", optional = true }
+tpt-thermo-electrolyte = { path = "../tpt-thermo-electrolyte", optional = true }
+tpt-thermo-polymer = { path = "../tpt-thermo-polymer", optional = true }
+
+[features]
+default = []
+cubic = ["tpt-thermo-eos-cubic"]
+activity = ["tpt-thermo-eos-activity"]
+saft = ["tpt-thermo-eos-saft"]
+phase = ["tpt-thermo-phase"]
+bubble-dew = ["tpt-thermo-bubble-dew"]
+flash = ["tpt-thermo-flash"]
+transport = ["tpt-thermo-transport"]
+electrolyte = ["tpt-thermo-electrolyte"]
+polymer = ["tpt-thermo-polymer"]
+data = []
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true

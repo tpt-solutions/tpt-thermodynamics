@@ -62,8 +62,3 @@ pub fn molar_mass_kg(db: &dyn ComponentDatabase, i: usize) -> Result<f64, Thermo
     let _ = MolarMass::new::<uom::si::molar_mass::kilogram_per_mole>(0.0);
     Ok(db.molar_mass(i)?.value)
 }
-
-#[allow(unused_imports)]
-use uom::si::molar_mass::kilogram_per_mole as _kgp;
-#[allow(unused_imports)]
-use {Pressure, Temperature};

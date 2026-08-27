@@ -12,6 +12,9 @@ tpt-thermo-data = { path = "../tpt-thermo-data" }
 tpt-math-units = { workspace = true, default-features = false, features = ["alloc"] }
 uom = { workspace = true, default-features = false, features = ["si", "f32", "f64", "autoconvert"] }
 
+[dev-dependencies]
+tpt-thermo-eos-cubic = { path = "../tpt-thermo-eos-cubic" }
+
 [features]
 default = ["std"]
 std = []
@@ -22,3 +25,4 @@ path = "src/lib.rs"
 
 [lints]
 workspace = true
+
