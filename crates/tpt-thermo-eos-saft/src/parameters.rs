@@ -159,7 +159,7 @@ pub const SEED_SAFT_PARAMETERS: &[SaftComponent] = &[
 /// index order).
 #[derive(Debug, Clone)]
 pub struct SaftParameters {
-    components: Vec<SaftComponent>,
+    pub(crate) components: Vec<SaftComponent>,
 }
 
 impl SaftParameters {
@@ -200,9 +200,9 @@ impl SaftParameters {
                     let tc = db.critical_temperature(i)?.value;
                     let pc = db.critical_pressure(i)?.value;
                     let vc = 0.08664 * tpt_thermo_core::R * tc / pc; // cubic v_c estimate (m³/mol)
-                    let sigma = (vc / (crate::R * tc / pc) * 1.0).cbrt().max(2.5);
+                    let sigma = (vc / (tpt_thermo_core::R * tc / pc) * 1.0).cbrt().max(2.5);
                     SaftComponent::pc_saft(
-                        db.name(i)?,
+                        "estimated",
                         (tc / 1.0).clamp(0.8, 6.0),
                         sigma,
                         tc * 0.6,

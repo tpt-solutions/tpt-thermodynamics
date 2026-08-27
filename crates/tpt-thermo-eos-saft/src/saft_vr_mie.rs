@@ -15,9 +15,6 @@ use tpt_thermo_core::component::ComponentDatabase;
 use tpt_thermo_core::error::ThermoError;
 use tpt_thermo_core::quantities::{MolarVolume, Pressure, Temperature};
 use tpt_thermo_core::EquationOfState;
-use uom::si::molar_volume::cubic_meter_per_mole;
-use uom::si::pressure::pascal;
-use uom::si::thermodynamic_temperature::kelvin;
 
 /// A SAFT-VR Mie equation of state.
 #[derive(Debug, Clone)]

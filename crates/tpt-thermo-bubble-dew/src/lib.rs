@@ -154,85 +154,203 @@ impl<'a> BubbleDewSolver<'a> {
         }
     }
 
-    /// Locate the two-phase boundary temperature for a fixed pressure and feed
-    /// composition, scanning in the direction `up` (`true` = rising temperature,
-    /// used for bubble points; `false` = falling, used for dew points).
+    /// Bubble-point temperature of liquid `x` at pressure `p`: the temperature
+    /// where the incipient-phase K-values satisfy `Σ x_i K_i = 1`, located by
+    /// root-solving `bubble_g` (see [`bubble_g`]).
     pub(crate) fn boundary_temperature(
         &self,
         p: Pressure,
-        z: &[f64],
-        up: bool,
+        x: &[f64],
     ) -> Result<f64, ThermoError> {
-        let (t_lo, t_hi) = self.t_bounds();
+        let (t_lo, _t_hi) = self.t_bounds();
+        let (lo, hi) = (0.3 * self.min_tc(), (0.99 * self.min_tc()).max(t_lo));
         let eos = self.eos;
-        let is_tp = |v: f64| phase_gap(eos, Temperature::new::<kelvin>(v), p, z) > 0.0;
-        let (a, b) = bracket_transition(is_tp, t_lo, t_hi, up)?;
-        tpt_thermo_core::bisection(
-            |v: f64| phase_gap(eos, Temperature::new::<kelvin>(v), p, z),
-            a,
-            b,
-            1e-7,
-            200,
+        root_scalar(
+            |v: f64| bubble_g(eos, Temperature::new::<kelvin>(v), p, x),
+            lo,
+            (hi - lo) / 2000.0,
+            lo,
+            hi,
         )
-        .map_err(ThermoError::Numerical)
+        
     }
 
-    /// Locate the two-phase boundary pressure for a fixed temperature and feed
-    /// composition, scanning in the direction `up` (`true` = rising pressure,
-    /// used for dew points; `false` = falling, used for bubble points).
+    /// Dew-point temperature of vapor `y` at pressure `p`: the temperature where
+    /// `Σ y_i / K_i = 1` (see [`dew_g`]).
+    pub(crate) fn boundary_temperature_dew(
+        &self,
+        p: Pressure,
+        y: &[f64],
+    ) -> Result<f64, ThermoError> {
+        let (t_lo, _t_hi) = self.t_bounds();
+        let (lo, hi) = (0.3 * self.min_tc(), (0.99 * self.max_tc()).max(t_lo));
+        let eos = self.eos;
+        root_scalar(
+            |v: f64| dew_g(eos, Temperature::new::<kelvin>(v), p, y),
+            lo,
+            (hi - lo) / 2000.0,
+            lo,
+            hi,
+        )
+        
+    }
+
+    /// Bubble-point pressure of liquid `x` at temperature `t`: root-solve
+    /// `bubble_g` over pressure.
     pub(crate) fn boundary_pressure(
         &self,
         t: Temperature,
-        z: &[f64],
-        up: bool,
+        x: &[f64],
     ) -> Result<f64, ThermoError> {
         let (p_lo, p_hi) = self.p_bounds();
         let eos = self.eos;
-        let is_tp = |v: f64| phase_gap(eos, t, Pressure::new::<pascal>(v), z) > 0.0;
-        let (a, b) = bracket_transition(is_tp, p_lo, p_hi, up)?;
-        tpt_thermo_core::bisection(
-            |v: f64| phase_gap(eos, t, Pressure::new::<pascal>(v), z),
-            a,
-            b,
-            1e-4,
-            200,
+        root_scalar(
+            |v: f64| bubble_g(eos, t, Pressure::new::<pascal>(v), x),
+            p_lo,
+            (p_hi - p_lo) / 2000.0,
+            p_lo,
+            p_hi,
         )
-        .map_err(ThermoError::Numerical)
+        
+    }
+
+    /// Dew-point pressure of vapor `y` at temperature `t`: root-solve `dew_g`.
+    pub(crate) fn boundary_pressure_dew(
+        &self,
+        t: Temperature,
+        y: &[f64],
+    ) -> Result<f64, ThermoError> {
+        let (p_lo, p_hi) = self.p_bounds();
+        let eos = self.eos;
+        root_scalar(
+            |v: f64| dew_g(eos, t, Pressure::new::<pascal>(v), y),
+            p_lo,
+            (p_hi - p_lo) / 2000.0,
+            p_lo,
+            p_hi,
+        )
+        
+    }
+
+    fn min_tc(&self) -> f64 {
+        let mut m = f64::INFINITY;
+        for i in 0..self.db.num_components() {
+            if let Ok(tc) = self.db.critical_temperature(i) {
+                m = m.min(tc.value);
+            }
+        }
+        if !m.is_finite() {
+            m = 200.0;
+        }
+        m
+    }
+
+    fn max_tc(&self) -> f64 {
+        let mut m = 0.0_f64;
+        for i in 0..self.db.num_components() {
+            if let Ok(tc) = self.db.critical_temperature(i) {
+                m = m.max(tc.value);
+            }
+        }
+        if m <= 0.0 {
+            m = 1000.0;
+        }
+        m
     }
 }
 
-/// Scan `var` from `start` (here `lo` or `hi`, chosen by `up`) in steps of
-/// `(hi-lo)/2000` until `is_tp` flips, returning the two adjacent sample points
-/// that bracket the two-phase boundary.
-fn bracket_transition<F>(
-    mut is_tp: F,
-    lo: f64,
-    hi: f64,
-    up: bool,
-) -> Result<(f64, f64), ThermoError>
+/// Incipient-phase bubble residual `Σ_i x_i K_i − 1` with `K_i = φ_i^L/φ_i^V`
+/// evaluated at the liquid (feed) composition `x`. Crosses zero at the bubble
+/// point. Returns `NaN` when either phase volume cannot be resolved.
+pub fn bubble_g(
+    eos: &dyn KProvider,
+    t: Temperature,
+    p: Pressure,
+    x: &[f64],
+) -> f64 {
+    let vl = match eos.phase_volume(t, p, x, Phase::Liquid) {
+        Ok(v) => v,
+        Err(_) => return f64::NAN,
+    };
+    let vv = match eos.phase_volume(t, p, x, Phase::Vapor) {
+        Ok(v) => v,
+        Err(_) => return f64::NAN,
+    };
+    let mut s = 0.0_f64;
+    for i in 0..x.len() {
+        let phl = match eos.ln_fugacity_coefficient(t, vl, x, i) {
+            Ok(l) => l.exp(),
+            Err(_) => return f64::NAN,
+        };
+        let pfv = match eos.ln_fugacity_coefficient(t, vv, x, i) {
+            Ok(l) => l.exp(),
+            Err(_) => return f64::NAN,
+        };
+        if pfv <= 0.0 {
+            return f64::NAN;
+        }
+        s += x[i] * phl / pfv;
+    }
+    s - 1.0
+}
+
+/// Incipient-phase dew residual `Σ_i y_i / K_i − 1` with `K_i = φ_i^L/φ_i^V`
+/// evaluated at the vapor (feed) composition `y`. Crosses zero at the dew point.
+pub fn dew_g(
+    eos: &dyn KProvider,
+    t: Temperature,
+    p: Pressure,
+    y: &[f64],
+) -> f64 {
+    let vl = match eos.phase_volume(t, p, y, Phase::Liquid) {
+        Ok(v) => v,
+        Err(_) => return f64::NAN,
+    };
+    let vv = match eos.phase_volume(t, p, y, Phase::Vapor) {
+        Ok(v) => v,
+        Err(_) => return f64::NAN,
+    };
+    let mut s = 0.0_f64;
+    for i in 0..y.len() {
+        let phl = match eos.ln_fugacity_coefficient(t, vl, y, i) {
+            Ok(l) => l.exp(),
+            Err(_) => return f64::NAN,
+        };
+        let pfv = match eos.ln_fugacity_coefficient(t, vv, y, i) {
+            Ok(l) => l.exp(),
+            Err(_) => return f64::NAN,
+        };
+        if phl <= 0.0 {
+            return f64::NAN;
+        }
+        s += y[i] * pfv / phl;
+    }
+    s - 1.0
+}
+
+/// Scan `var` from `start` in `step` increments until the (NaN-aware) residual
+/// `f` changes sign, then refine the root with bisection.
+fn root_scalar<F>(f: F, start: f64, step: f64, lo: f64, hi: f64) -> Result<f64, ThermoError>
 where
-    F: FnMut(f64) -> bool,
+    F: Fn(f64) -> f64,
 {
-    let step = if up { (hi - lo) / 2000.0 } else { -(hi - lo) / 2000.0 };
-    let mut var = if up { lo } else { hi };
-    let mut prev = is_tp(var);
-    let mut prev_var = var;
+    let mut var = start;
+    let mut fprev = f(var);
+    let mut vprev = var;
     for _ in 0..5000 {
         var += step;
-        let tp = is_tp(var);
-        if tp != prev {
-            let (a, b) = if prev_var <= var {
-                (prev_var, var)
-            } else {
-                (var, prev_var)
-            };
-            return Ok((a, b));
+        let fv = f(var);
+        if fprev.is_finite() && fv.is_finite() && fprev * fv <= 0.0 {
+            let (a, b) = if vprev <= var { (vprev, var) } else { (var, vprev) };
+            return tpt_thermo_core::bisection(|v: f64| f(v), a, b, 1e-7, 200)
+                .map_err(ThermoError::Numerical);
+                ;
         }
-        if (up && var >= hi) || (!up && var <= lo) {
-            return Err(ThermoError::Numerical(ConvergenceStatus::NotConverged));
+        vprev = var;
+        fprev = fv;
+        if (step > 0.0 && var >= hi) || (step < 0.0 && var <= lo) {
+            break;
         }
-        prev = tp;
-        prev_var = var;
     }
     Err(ThermoError::Numerical(ConvergenceStatus::NotConverged))
 }

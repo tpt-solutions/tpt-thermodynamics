@@ -32,7 +32,7 @@ impl<'a> BubbleDewSolver<'a> {
         p: Pressure,
         y: &[f64],
     ) -> Result<DewPoint, ThermoError> {
-        let td = self.boundary_temperature(p, y, false)?;
+        let td = self.boundary_temperature_dew(p, y)?;
         let t = Temperature::new::<kelvin>(td);
         let eq = self.equilibrium_at(t, p, y, Kind::Dew)?;
         Ok(DewPoint {
@@ -52,7 +52,7 @@ impl<'a> BubbleDewSolver<'a> {
         t: Temperature,
         y: &[f64],
     ) -> Result<DewPoint, ThermoError> {
-        let pd = self.boundary_pressure(t, y, true)?;
+        let pd = self.boundary_pressure_dew(t, y)?;
         let p = Pressure::new::<pascal>(pd);
         let eq = self.equilibrium_at(t, p, y, Kind::Dew)?;
         Ok(DewPoint {

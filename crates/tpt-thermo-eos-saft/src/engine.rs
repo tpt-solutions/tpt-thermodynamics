@@ -40,26 +40,18 @@ const PI: f64 = core::f64::consts::PI;
 
 /// SAFT model flavour.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum SaftFlavor {
+pub enum SaftFlavor {
     PcSaft,
     VrMie,
 }
 
 /// The shared SAFT engine.
+#[derive(Debug, Clone)]
 pub struct SaftEngine {
     params: SaftParameters,
     kij: Vec<Vec<f64>>,
     molar_masses: Vec<f64>,
-    flavor: SaftFlavor,
-}
-
-impl core::fmt::Debug for SaftEngine {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("SaftEngine")
-            .field("n", &self.params.num_components())
-            .field("flavor", &self.flavor)
-            .finish()
-    }
+    pub(crate) flavor: SaftFlavor,
 }
 
 impl SaftEngine {
@@ -277,7 +269,7 @@ impl SaftEngine {
     }
 
     /// `∂(a^res/RT)/∂T` (central difference, `v`, `x` fixed).
-    fn da_dT(&self, t: f64, v: f64, x: &[f64]) -> Result<f64, ThermoError> {
+    fn da_dt(&self, t: f64, v: f64, x: &[f64]) -> Result<f64, ThermoError> {
         let h = t.abs().max(1.0) * 1e-4;
         let ap = self.ares(t + h, v, x)?;
         let am = self.ares(t - h, v, x)?;
@@ -446,7 +438,7 @@ impl EquationOfState for SaftEngine {
         x: &[f64],
     ) -> Result<MolarEnergy, ThermoError> {
         // Residual enthalpy: H^res = -R T² ∂(a^res/RT)/∂T.
-        let da_dt = self.da_dT(t.value, v.value, x)?;
+        let da_dt = self.da_dt(t.value, v.value, x)?;
         let h_res = -R * t.value * t.value * da_dt;
         Ok(MolarEnergy::new::<joule_per_mole>(h_res))
     }
@@ -458,7 +450,7 @@ impl EquationOfState for SaftEngine {
         x: &[f64],
     ) -> Result<MolarEntropy, ThermoError> {
         let ares = self.ares(t.value, v.value, x)?;
-        let da_dt = self.da_dT(t.value, v.value, x)?;
+        let da_dt = self.da_dt(t.value, v.value, x)?;
         // S^res = -R (a^res + T da/dT).
         let s_res = -R * (ares + t.value * da_dt);
         let p = self.pressure_value(t.value, v.value, x)?;

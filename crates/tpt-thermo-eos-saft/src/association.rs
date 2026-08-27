@@ -118,7 +118,7 @@ pub fn solve_association(
             s[i] = rho * acc;
         }
         // Fixed-point residual: F_i = X_i - 1/(1 + S_i).
-        let mut max_f = 0.0;
+        let mut max_f: f64 = 0.0;
         let mut f = vec![0.0_f64; n];
         for i in 0..n {
             if sites[i] == 0 {
@@ -158,7 +158,7 @@ pub fn solve_association(
             .map_err(|_| ConvergenceStatus::NumericalIssue(
                 tpt_thermo_core::convergence::NumericalIssueReason::SingularJacobian,
             ))?;
-        let mut max_step = 0.0;
+        let mut max_step: f64 = 0.0;
         for i in 0..n {
             if sites[i] == 0 {
                 continue;

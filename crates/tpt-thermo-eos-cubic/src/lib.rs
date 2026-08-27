@@ -48,11 +48,9 @@ pub mod volume_translation;
 
 pub use alpha::{AlphaFunction, MathiasCopemanAlpha, SoaveAlpha, TwuAlpha};
 pub use critical::{critical_point, mechanical_stability, spinodal_roots};
-pub use cubic_solver::{
-    CubicModel, Phase, compressibility_roots, cubic_real_roots, select_root,
-};
+pub use cubic_solver::{compressibility_roots, cubic_real_roots, select_root, CubicModel, Phase};
 pub use engine::CubicEos;
-pub use mixing::{CubicMixing, HvVariant, HuronVidal, VdwMixing, WongSandler};
+pub use mixing::{CubicMixing, HuronVidal, HvVariant, VdwMixing, WongSandler};
 pub use pr::PengRobinson;
 pub use srk::SoaveRedlichKwong;
 pub use volume_translation::{peneloux_c, VolumeTranslated};

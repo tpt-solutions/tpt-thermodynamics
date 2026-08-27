@@ -9,7 +9,7 @@
 //! model/mixing choices.
 
 use crate::alpha::AlphaFunction;
-use crate::cubic_solver::{CubicModel, Phase, compressibility_roots, select_root};
+use crate::cubic_solver::{compressibility_roots, select_root, CubicModel, Phase};
 use crate::mixing::CubicMixing;
 use alloc::boxed::Box;
 use alloc::vec;
@@ -19,7 +19,7 @@ use tpt_thermo_core::quantities::{
     molar_entropy, MolarEnergy, MolarEntropy, MolarHeatCapacity, MolarVolume, Pressure,
     Temperature, Velocity,
 };
-use tpt_thermo_core::{EquationOfState, R, ThermoError};
+use tpt_thermo_core::{EquationOfState, ThermoError, R};
 use uom::si::molar_energy::joule_per_mole;
 use uom::si::molar_heat_capacity::joule_per_kelvin_mole;
 use uom::si::molar_volume::cubic_meter_per_mole;
@@ -88,7 +88,13 @@ impl CubicEos {
             let omega = db.acentric_factor(i)?;
             let bi = model.b_factor() * R * tc / pc;
             let ai0 = model.a_factor() * R * R * tc * tc / pc;
-            pure.push(PureParams { tc, pc, omega, bi, ai0 });
+            pure.push(PureParams {
+                tc,
+                pc,
+                omega,
+                bi,
+                ai0,
+            });
             molar_masses.push(db.molar_mass(i)?.value);
         }
         Ok(Self {
@@ -128,7 +134,10 @@ impl CubicEos {
     }
 
     fn a_i_vec(&self, t: f64) -> Vec<f64> {
-        self.pure.iter().map(|p| p.a(self.alpha.as_ref(), t)).collect()
+        self.pure
+            .iter()
+            .map(|p| p.a(self.alpha.as_ref(), t))
+            .collect()
     }
 
     fn b_i_vec(&self) -> Vec<f64> {
@@ -136,11 +145,7 @@ impl CubicEos {
     }
 
     /// Mixture `a`, `b`, and the component `a_i`, `b_i` vectors at `(T, z)`.
-    pub(crate) fn mix_params(
-        &self,
-        t: f64,
-        z: &[f64],
-    ) -> (f64, f64, Vec<f64>, Vec<f64>) {
+    pub(crate) fn mix_params(&self, t: f64, z: &[f64]) -> (f64, f64, Vec<f64>, Vec<f64>) {
         let a = self.a_i_vec(t);
         let b = self.b_i_vec();
         let amix = self.mixing.a_mix(&a, &b, z, t, P_REF);
@@ -154,9 +159,7 @@ impl CubicEos {
         // attractive coefficient is supplied separately by [`attractive_coeff`].
         let b = bmix * p / (R * t);
         let logterm = match self.model {
-            CubicModel::PengRobinson => {
-                ((zc + (1.0 + SQRT2) * b) / (zc + (1.0 - SQRT2) * b)).ln()
-            }
+            CubicModel::PengRobinson => ((zc + (1.0 + SQRT2) * b) / (zc + (1.0 - SQRT2) * b)).ln(),
             CubicModel::SoaveRedlichKwong => (1.0 + b / zc).ln(),
         };
         (logterm, b)
@@ -190,8 +193,9 @@ impl CubicEos {
         phase: Phase,
     ) -> Result<MolarVolume, ThermoError> {
         let roots = self.z_roots(t, p, z);
-        let zroot = select_root(&roots, phase)
-            .ok_or_else(|| ThermoError::Numerical(tpt_thermo_core::ConvergenceStatus::NotConverged))?;
+        let zroot = select_root(&roots, phase).ok_or(ThermoError::Numerical(
+            tpt_thermo_core::ConvergenceStatus::NotConverged,
+        ))?;
         if zroot <= 0.0 {
             return Err(ThermoError::Numerical(
                 tpt_thermo_core::ConvergenceStatus::NumericalIssue(
@@ -280,7 +284,9 @@ impl CubicEos {
             }
         }
         if !converged {
-            return Err(ThermoError::Numerical(tpt_thermo_core::ConvergenceStatus::NotConverged));
+            return Err(ThermoError::Numerical(
+                tpt_thermo_core::ConvergenceStatus::NotConverged,
+            ));
         }
         let v_eos = x * bi;
         let t = y * tc0;
@@ -315,9 +321,11 @@ impl EquationOfState for CubicEos {
         let (u, w) = (self.model.u(), self.model.w());
         let denom = v_eos * v_eos + u * bmix * v_eos + w * bmix * bmix;
         if denom <= 0.0 || v_eos <= bmix {
-            return Err(ThermoError::Numerical(tpt_thermo_core::ConvergenceStatus::NumericalIssue(
-                tpt_thermo_core::NumericalIssueReason::NonPhysical,
-            )));
+            return Err(ThermoError::Numerical(
+                tpt_thermo_core::ConvergenceStatus::NumericalIssue(
+                    tpt_thermo_core::NumericalIssueReason::NonPhysical,
+                ),
+            ));
         }
         let p = R * t.value / (v_eos - bmix) - amix / denom;
         Ok(Pressure::new::<pascal>(p))
@@ -338,9 +346,11 @@ impl EquationOfState for CubicEos {
         let (u, w) = (self.model.u(), self.model.w());
         let denom = v_eos * v_eos + u * bmix * v_eos + w * bmix * bmix;
         if denom <= 0.0 || v_eos <= bmix {
-            return Err(ThermoError::Numerical(tpt_thermo_core::ConvergenceStatus::NumericalIssue(
-                tpt_thermo_core::NumericalIssueReason::NonPhysical,
-            )));
+            return Err(ThermoError::Numerical(
+                tpt_thermo_core::ConvergenceStatus::NumericalIssue(
+                    tpt_thermo_core::NumericalIssueReason::NonPhysical,
+                ),
+            ));
         }
         let p = R * t.value / (v_eos - bmix) - amix / denom;
         let zc = p * v_eos / (R * t.value);
@@ -364,9 +374,11 @@ impl EquationOfState for CubicEos {
         let (u, w) = (self.model.u(), self.model.w());
         let denom = v_eos * v_eos + u * bmix * v_eos + w * bmix * bmix;
         if denom <= 0.0 || v_eos <= bmix {
-            return Err(ThermoError::Numerical(tpt_thermo_core::ConvergenceStatus::NumericalIssue(
-                tpt_thermo_core::NumericalIssueReason::NonPhysical,
-            )));
+            return Err(ThermoError::Numerical(
+                tpt_thermo_core::ConvergenceStatus::NumericalIssue(
+                    tpt_thermo_core::NumericalIssueReason::NonPhysical,
+                ),
+            ));
         }
         let p = R * t.value / (v_eos - bmix) - amix / denom;
         let zc = p * v_eos / (R * t.value);
@@ -398,9 +410,11 @@ impl EquationOfState for CubicEos {
         let (u, w) = (self.model.u(), self.model.w());
         let denom = v_eos * v_eos + u * bmix * v_eos + w * bmix * bmix;
         if denom <= 0.0 || v_eos <= bmix {
-            return Err(ThermoError::Numerical(tpt_thermo_core::ConvergenceStatus::NumericalIssue(
-                tpt_thermo_core::NumericalIssueReason::NonPhysical,
-            )));
+            return Err(ThermoError::Numerical(
+                tpt_thermo_core::ConvergenceStatus::NumericalIssue(
+                    tpt_thermo_core::NumericalIssueReason::NonPhysical,
+                ),
+            ));
         }
         let p = R * t.value / (v_eos - bmix) - amix / denom;
         let zc = p * v_eos / (R * t.value);
@@ -451,9 +465,11 @@ impl EquationOfState for CubicEos {
     ) -> Result<Velocity, ThermoError> {
         let (cp, cv) = self.cp_cv(t, v, z)?;
         if cv <= 0.0 {
-            return Err(ThermoError::Numerical(tpt_thermo_core::ConvergenceStatus::NumericalIssue(
-                tpt_thermo_core::NumericalIssueReason::SingularJacobian,
-            )));
+            return Err(ThermoError::Numerical(
+                tpt_thermo_core::ConvergenceStatus::NumericalIssue(
+                    tpt_thermo_core::NumericalIssueReason::SingularJacobian,
+                ),
+            ));
         }
         let dp_dv = self.dp_dv(t, v, z)?;
         let m_mass: f64 = self
@@ -467,9 +483,11 @@ impl EquationOfState for CubicEos {
         }
         let a2 = (cp / cv) * (-v.value * v.value * dp_dv) / m_mass;
         if a2 <= 0.0 {
-            return Err(ThermoError::Numerical(tpt_thermo_core::ConvergenceStatus::NumericalIssue(
-                tpt_thermo_core::NumericalIssueReason::NonPhysical,
-            )));
+            return Err(ThermoError::Numerical(
+                tpt_thermo_core::ConvergenceStatus::NumericalIssue(
+                    tpt_thermo_core::NumericalIssueReason::NonPhysical,
+                ),
+            ));
         }
         Ok(Velocity::new::<meter_per_second>(a2.sqrt()))
     }
@@ -479,12 +497,7 @@ impl CubicEos {
     /// `(c_p, c_v)` (J·mol⁻¹·K⁻¹) at `(T, v, z)` via finite differences of the
     /// residual internal energy and the thermodynamic identity
     /// `c_p − c_v = −T (∂P/∂T)_v² / (∂P/∂v)_T`.
-    fn cp_cv(
-        &self,
-        t: Temperature,
-        v: MolarVolume,
-        z: &[f64],
-    ) -> Result<(f64, f64), ThermoError> {
+    fn cp_cv(&self, t: Temperature, v: MolarVolume, z: &[f64]) -> Result<(f64, f64), ThermoError> {
         let dt = t.value.abs().max(1.0) * 1e-3;
         let u = |tt: f64| -> Result<f64, ThermoError> {
             let tv = Temperature::new::<kelvin>(tt);
@@ -492,8 +505,7 @@ impl CubicEos {
             let (amix, bmix, _, _) = self.mix_params(tt, z);
             let ve = v.value + self.c_mix(z);
             let p = R * tt / (ve - bmix)
-                - amix
-                    / (ve * ve + self.model.u() * bmix * ve + self.model.w() * bmix * bmix);
+                - amix / (ve * ve + self.model.u() * bmix * ve + self.model.w() * bmix * bmix);
             let zc2 = p * ve / (R * tt);
             // Residual internal energy u = H − R T (Z − 1) (the +R T is the
             // ideal-gas reference that cancels in derivatives but keeps u finite).
@@ -505,9 +517,11 @@ impl CubicEos {
         let dp_dv = self.dp_dv(t, v, z)?;
         let dp_dt = self.dp_dt(t, v, z)?;
         if dp_dv.abs() < 1e-30 {
-            return Err(ThermoError::Numerical(tpt_thermo_core::ConvergenceStatus::NumericalIssue(
-                tpt_thermo_core::NumericalIssueReason::SingularJacobian,
-            )));
+            return Err(ThermoError::Numerical(
+                tpt_thermo_core::ConvergenceStatus::NumericalIssue(
+                    tpt_thermo_core::NumericalIssueReason::SingularJacobian,
+                ),
+            ));
         }
         let cp = cv - t.value * dp_dt * dp_dt / dp_dv;
         Ok((cp, cv))

@@ -36,6 +36,21 @@ impl CriticalGuess {
     }
 }
 
+/// Solve `J d = -F` for the 2×2 `J` with Levenberg–Marquardt damping, so the
+/// (near-)singular Jacobian at a critical point still yields a usable step.
+fn damped_solve(j: &[[f64; 2]; 2], f: &[f64; 2]) -> Option<(f64, f64)> {
+    for lambda in [0.0_f64, 1e-9, 1e-7, 1e-5, 1e-3, 1e-1] {
+        let a = [[j[0][0] + lambda, j[0][1]], [j[1][0], j[1][1] + lambda]];
+        let det = a[0][0] * a[1][1] - a[0][1] * a[1][0];
+        if det.abs() > 1e-30 {
+            let dv = (-f[0] * a[1][1] + f[1] * a[0][1]) / det;
+            let dt = (f[0] * a[1][0] - f[1] * a[0][0]) / det;
+            return Some((dv, dt));
+        }
+    }
+    None
+}
+
 /// Second derivative `(∂²P/∂v²)_T` via central differences on [`EquationOfState::dp_dv`].
 fn d2p_dv2<E: EquationOfState + ?Sized>(eos: &E, t: Temperature, v: MolarVolume, z: &[f64]) -> f64 {
     let h = v.value.abs().max(1e-8) * 1e-4;
@@ -117,16 +132,14 @@ pub fn mixture_critical_point<E: EquationOfState + ?Sized>(
             [(pv_vp - pv_vm) / (2.0 * hv), (pv_tp - pv_tm) / (2.0 * ht)],
             [(pvv_vp - pvv_vm) / (2.0 * hv), (pvv_tp - pvv_tm) / (2.0 * ht)],
         ];
-        let det = j[0][0] * j[1][1] - j[0][1] * j[1][0];
-        if det.abs() < 1e-30 {
-            return Err(ThermoError::Numerical(
-                tpt_thermo_core::ConvergenceStatus::NumericalIssue(
-                    tpt_thermo_core::NumericalIssueReason::SingularJacobian,
-                ),
-            ));
-        }
-        let dv = (-pv * j[1][1] + pvv * j[0][1]) / det;
-        let dt = (pv * j[1][0] - pvv * j[0][0]) / det;
+        // The critical point is a horizontal inflection, so the (v,T) Jacobian
+        // is singular there; regularise with Levenberg–Marquardt damping.
+        let f = [pv, pvv];
+        let (dv, dt) = damped_solve(&j, &f).ok_or_else(|| {
+            ThermoError::Numerical(tpt_thermo_core::ConvergenceStatus::NumericalIssue(
+                tpt_thermo_core::NumericalIssueReason::SingularJacobian,
+            ))
+        })?;
         let mut step = 1.0_f64;
         loop {
             let nv = v.value + step * dv;
@@ -147,11 +160,15 @@ pub fn mixture_critical_point<E: EquationOfState + ?Sized>(
     Err(ThermoError::Numerical(tpt_thermo_core::ConvergenceStatus::NotConverged))
 }
 
-/// Trace the critical locus of a binary as the mole fraction `z1` sweeps
-/// `0 → 1` in `n` steps, returning `(z1, T_c, P_c)` points that converged.
+/// Trace the critical locus of a binary (`components i0`/`i1`) as the mole
+/// fraction `z_{i0}` sweeps `0 → 1` in `n` steps, returning
+/// `(z_{i0}, T_c, P_c)` points that converged. The composition is built at the
+/// full database length (other components set to zero).
 pub fn critical_locus_binary<E: EquationOfState + ?Sized>(
     eos: &E,
     db: &dyn ComponentDatabase,
+    i0: usize,
+    i1: usize,
     n: usize,
 ) -> Vec<(f64, Temperature, Pressure)> {
     let mut out = Vec::new();
@@ -160,7 +177,9 @@ pub fn critical_locus_binary<E: EquationOfState + ?Sized>(
     }
     for k in 0..=n {
         let z1 = k as f64 / n as f64;
-        let z = vec![z1, 1.0 - z1];
+        let mut z = vec![0.0_f64; db.num_components()];
+        z[i0] = z1;
+        z[i1] = 1.0 - z1;
         let guess = CriticalGuess::from_database(db, &z);
         if let Ok((t, p, _v)) = mixture_critical_point(eos, &z, guess) {
             out.push((z1, t, p));

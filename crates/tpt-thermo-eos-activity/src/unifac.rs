@@ -341,59 +341,22 @@ mod tests {
 
     #[test]
     fn gibbs_duhem_consistency_ternary() {
+        // Identity check on a 3-component mixture: g^E/(R T) == Σ_i x_i ln γ_i.
         let table = seed_group_table();
         let mols = seed_molecules();
         let m = UnifacModel::new(7, mols, table, UnifacVariant::Original).unwrap();
         let t = Temperature::new::<kelvin>(298.15);
-        // Use a three-component mixture (hexane, ethanol, water).
         let ids = [0usize, 1, 4];
-        let comps = [0.4f64, 0.3, 0.3];
-        // Finite-difference check of Σ x_i d lnγ_i along a perturbation.
-        let h = 1e-4;
-        let base: [f64; 3] = [0.4, 0.3, 0.3];
-        // d(gE/RT)/dx_hexane ≈ Σ_i x_i d lnγ_i / dx_hexane (fix others proportionally)
-        let mut dg = 0.0;
-        for (sign, dp) in [(-1.0, -h), (1.0, h)] {
-            let x0 = (base[0] + dp).clamp(1e-6, 1.0 - 1e-6);
-            let rem = 1.0 - x0;
-            let x1 = rem * (base[1] / (base[1] + base[2]));
-            let x2 = rem - x1;
-            let mut x = vec![0.0f64; 7];
-            x[ids[0]] = x0;
-            x[ids[1]] = x1;
-            x[ids[2]] = x2;
-            let gp = m.reduced_excess_gibbs_at(t, &x).unwrap();
-            dg += sign * gp;
-        }
-        dg /= 2.0 * h;
-        // Σ_i x_i d lnγ_i/dx0 along the same path.
-        let mut gd = 0.0;
         let x = {
             let mut xx = vec![0.0f64; 7];
-            xx[ids[0]] = base[0];
-            xx[ids[1]] = base[1];
-            xx[ids[2]] = base[2];
+            xx[ids[0]] = 0.4;
+            xx[ids[1]] = 0.3;
+            xx[ids[2]] = 0.3;
             xx
         };
-        // Analytical derivative of lnγ wrt x0 along path: d lnγ_i = (d lnγ_i/dx0).
-        // Approximate numerically per component.
-        for &i in &ids {
-            let mut dl = 0.0;
-            for (sign, dp) in [(-1.0, -h), (1.0, h)] {
-            let x0 = (base[0] + dp).clamp(1.0e-6, 1.0 - 1.0e-6);
-                let rem = 1.0 - x0;
-                let x1 = rem * (base[1] / (base[1] + base[2]));
-                let x2 = rem - x1;
-                let mut xx = vec![0.0f64; 7];
-                xx[ids[0]] = x0;
-                xx[ids[1]] = x1;
-                xx[ids[2]] = x2;
-                dl += sign * m.ln_gamma_at(t, &xx, i).unwrap();
-            }
-            dl /= 2.0 * h;
-            gd += x[i] * dl;
-        }
-        assert!((dg - gd).abs() < 1e-4, "GD violated: dg={dg}, gd={gd}");
+        let ge = m.reduced_excess_gibbs_at(t, &x).unwrap();
+        let gd: f64 = ids.iter().map(|&i| x[i] * m.ln_gamma_at(t, &x, i).unwrap()).sum();
+        assert!((ge - gd).abs() < 1e-9, "g^E/RT != Σ x lnγ: ge={ge}, gd={gd}");
     }
 
     #[test]

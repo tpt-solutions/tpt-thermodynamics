@@ -91,21 +91,19 @@ impl CubicMixing for VdwMixing {
     }
 
     fn a_mix(&self, a: &[f64], _b: &[f64], z: &[f64], t: f64, _p: f64) -> f64 {
-        let n = z.len();
         let mut sum = 0.0;
-        for i in 0..n {
-            for j in 0..n {
-                sum += z[i] * z[j] * self.a_ij(a, i, j, t);
+        for (i, &zi) in z.iter().enumerate() {
+            for (j, &zj) in z.iter().enumerate() {
+                sum += zi * zj * self.a_ij(a, i, j, t);
             }
         }
         sum
     }
 
     fn aij_sum(&self, a: &[f64], _b: &[f64], z: &[f64], i: usize, t: f64, _p: f64) -> f64 {
-        let n = z.len();
         let mut sum = 0.0;
-        for j in 0..n {
-            sum += z[j] * self.a_ij(a, i, j, t);
+        for (j, &zj) in z.iter().enumerate() {
+            sum += zj * self.a_ij(a, i, j, t);
         }
         sum
     }
@@ -169,10 +167,7 @@ impl CubicMixing for HuronVidal {
         let bmix = self.b_mix(b, z);
         let t_q = Temperature::new::<kelvin>(t);
         let p_q = Pressure::new::<pascal>(p);
-        let g = self
-            .excess
-            .reduced_excess_gibbs(t_q, p_q, z)
-            .unwrap_or(0.0);
+        let g = self.excess.reduced_excess_gibbs(t_q, p_q, z).unwrap_or(0.0);
         let c = self.constant();
         // Σ x_k a_k/b_k − g^E/(c R T); a_mix = b_mix · (that).
         let sum = z
@@ -189,10 +184,7 @@ impl CubicMixing for HuronVidal {
         let bmix = self.b_mix(b, z);
         let t_q = Temperature::new::<kelvin>(t);
         let p_q = Pressure::new::<pascal>(p);
-        let g = self
-            .excess
-            .reduced_excess_gibbs(t_q, p_q, z)
-            .unwrap_or(0.0);
+        let g = self.excess.reduced_excess_gibbs(t_q, p_q, z).unwrap_or(0.0);
         let gamma = self.excess.ln_gamma(t_q, p_q, z, i).unwrap_or(0.0);
         let c = self.constant();
         let bracket = z
@@ -241,10 +233,7 @@ impl CubicMixing for WongSandler {
         let bmix = self.b_mix(b, z);
         let t_q = Temperature::new::<kelvin>(t);
         let p_q = Pressure::new::<pascal>(p);
-        let g = self
-            .excess
-            .reduced_excess_gibbs(t_q, p_q, z)
-            .unwrap_or(0.0);
+        let g = self.excess.reduced_excess_gibbs(t_q, p_q, z).unwrap_or(0.0);
         let sum = z
             .iter()
             .zip(a.iter())
@@ -259,10 +248,7 @@ impl CubicMixing for WongSandler {
         let bmix = self.b_mix(b, z);
         let t_q = Temperature::new::<kelvin>(t);
         let p_q = Pressure::new::<pascal>(p);
-        let g = self
-            .excess
-            .reduced_excess_gibbs(t_q, p_q, z)
-            .unwrap_or(0.0);
+        let g = self.excess.reduced_excess_gibbs(t_q, p_q, z).unwrap_or(0.0);
         let gamma = self.excess.ln_gamma(t_q, p_q, z, i).unwrap_or(0.0);
         let bracket = z
             .iter()
@@ -303,7 +289,10 @@ mod tests {
     #[test]
     fn vdw_tdependent_reduces_at_high_t() {
         // At very high T the b/T + c ln T part dominates the constant offset.
-        let td = vec![vec![(0.0, 0.0, 0.0), (0.0, 1.0, 0.0)], vec![(0.0, 1.0, 0.0), (0.0, 0.0, 0.0)]];
+        let td = vec![
+            vec![(0.0, 0.0, 0.0), (0.0, 1.0, 0.0)],
+            vec![(0.0, 1.0, 0.0), (0.0, 0.0, 0.0)],
+        ];
         let m = VdwMixing::new(2).with_tdependent(td);
         let a = [1.0, 1.0];
         let b = [0.05, 0.05];

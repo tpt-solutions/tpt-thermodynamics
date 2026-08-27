@@ -9,10 +9,12 @@ use crate::alpha::soave;
 use crate::cubic_solver::CubicModel;
 use crate::engine::CubicEos;
 use crate::mixing::VdwMixing;
-use tpt_thermo_core::component::ComponentDatabase;
-use tpt_thermo_core::quantities::{MolarEnergy, MolarEntropy, MolarHeatCapacity, MolarVolume, Pressure, Temperature, Velocity};
-use tpt_thermo_core::{EquationOfState, ThermoError, R};
 use alloc::vec::Vec;
+use tpt_thermo_core::component::ComponentDatabase;
+use tpt_thermo_core::quantities::{
+    MolarEnergy, MolarEntropy, MolarHeatCapacity, MolarVolume, Pressure, Temperature, Velocity,
+};
+use tpt_thermo_core::{EquationOfState, ThermoError, R};
 
 /// Peneloux volume-translation parameter `c_i` for component `(Tc, Pc, ω)`.
 ///
@@ -83,12 +85,7 @@ impl EquationOfState for VolumeTranslated {
     fn num_components(&self) -> usize {
         self.inner.num_components()
     }
-    fn pressure(
-        &self,
-        t: Temperature,
-        v: MolarVolume,
-        z: &[f64],
-    ) -> Result<Pressure, ThermoError> {
+    fn pressure(&self, t: Temperature, v: MolarVolume, z: &[f64]) -> Result<Pressure, ThermoError> {
         self.inner.pressure(t, v, z)
     }
     fn ln_fugacity_coefficient(

@@ -3,7 +3,6 @@ use tpt_thermo_core::quantities::{MolarVolume, Pressure, Temperature};
 use tpt_thermo_core::EquationOfState;
 use tpt_thermo_data::SeedComponentDatabase;
 use tpt_thermo_eos_cubic::PengRobinson;
-use tpt_thermo_eos_cubic::cubic_solver::Phase;
 use uom::si::{molar_volume::cubic_meter_per_mole, pressure::pascal, thermodynamic_temperature::kelvin};
 
 fn db() -> SeedComponentDatabase { SeedComponentDatabase::from_seed() }
@@ -14,23 +13,25 @@ fn unit(i: usize) -> Vec<f64> {
 }
 
 #[test]
-fn inspect_vp() {
+fn inspect_methane() {
     let eos = PengRobinson::from_database(&db()).unwrap();
-    let co2 = db().index_of("carbon dioxide").unwrap();
-    let t = Temperature::new::<kelvin>(250.0);
-    let pc = db().critical_pressure(co2).unwrap().value;
-    for k in 1..=20 {
-        let p = pc * (k as f64) / 20.0;
-        let roots = eos.engine().z_roots(t, Pressure::new::<pascal>(p), &unit(co2));
-        let g = if roots.len() == 3 {
-            let zl = *roots.first().unwrap();
-            let zv = *roots.last().unwrap();
+    let m = db().index_of("methane").unwrap();
+    let t = Temperature::new::<kelvin>(150.0);
+    let vc = eos.critical_point_pure(m).unwrap().2.value;
+    eprintln!("vc={}", vc);
+    for p in [1.0e3, 5.0e5, 1.0e6, 1.2e6, 1.4e6, 1.6e6, 2.0e6] {
+        let r = eos.engine().z_roots(t, Pressure::new::<pascal>(p), &unit(m));
+        let info = if r.len() == 3 {
+            let zl = *r.first().unwrap();
+            let zv = *r.last().unwrap();
             let vl = zl * 8.314 * t.value / p;
             let vv = zv * 8.314 * t.value / p;
-            let lnl = eos.ln_fugacity_coefficient(t, MolarVolume::new::<cubic_meter_per_mole>(vl), &unit(co2), 0).unwrap();
-            let lnv = eos.ln_fugacity_coefficient(t, MolarVolume::new::<cubic_meter_per_mole>(vv), &unit(co2), 0).unwrap();
-            Some(lnl - lnv)
-        } else { None };
-        eprintln!("p={:.3e} nroots={} g={:?}", p, roots.len(), g);
+            let lnl = eos.ln_fugacity_coefficient(t, MolarVolume::new::<cubic_meter_per_mole>(vl), &unit(m), 0).unwrap();
+            let lnv = eos.ln_fugacity_coefficient(t, MolarVolume::new::<cubic_meter_per_mole>(vv), &unit(m), 0).unwrap();
+            format!("vl={:.3e} vv={:.3e} g={:.4}", vl, vv, lnl - lnv)
+        } else {
+            format!("1root z={:.4}", r[0])
+        };
+        eprintln!("p={:.3e} n={} {}", p, r.len(), info);
     }
 }

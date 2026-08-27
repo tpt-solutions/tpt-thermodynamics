@@ -204,11 +204,10 @@ mod tests {
         let t = Temperature::new::<kelvin>(333.15);
         let tau12 = m.tau.value_at(0, 1, t);
         let a = m.alpha[0][1];
-        let g12 = libm::exp(-a * tau12);
-        // ln γ_2^∞ = G_12 τ_12 + G_12 (τ_21 − G_21 τ_21)  (from the formula at x1=1)
         let tau21 = m.tau.value_at(1, 0, t);
         let g21 = libm::exp(-a * tau21);
-        let expected = g12 * tau12 + g12 * (tau21 - g21 * tau21);
+        // Correct infinite-dilution limit at x1 = 1: ln γ_2^∞ = τ_12 + G_21 τ_21.
+        let expected = tau12 + g21 * tau21;
         let got = m.ln_gamma_at(t, &[1.0 - 1e-9, 1e-9], 1).unwrap();
         assert!((got - expected).abs() < 1e-6, "got {got}, expected {expected}");
     }

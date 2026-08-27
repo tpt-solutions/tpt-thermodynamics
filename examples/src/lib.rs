@@ -102,7 +102,11 @@ pub mod phase4 {
         let mut end = None;
         for k in 1..2000 {
             let p = 1.0e3 * (k as f64);
-            let three = eos.engine().z_roots(t, Pressure::new::<pascal>(p), &z).len() == 3;
+            let three = eos
+                .engine()
+                .z_roots(t, Pressure::new::<pascal>(p), &z)
+                .len()
+                == 3;
             if three && start.is_none() {
                 start = Some(p);
             }
@@ -179,7 +183,7 @@ pub mod phase4 {
 /// criconden detection, driven by the Peng-Robinson cubic EoS over the curated
 /// seed set.
 pub mod phase9 {
-    use tpt_thermo_bubble_dew::{BubbleDewSolver, KProvider, bubble_dew_envelope};
+    use tpt_thermo_bubble_dew::{bubble_dew_envelope, BubbleDewSolver, KProvider};
     use tpt_thermo_core::quantities::Pressure;
     use tpt_thermo_data::SeedComponentDatabase;
     use tpt_thermo_eos_cubic::PengRobinson;
@@ -228,8 +232,16 @@ molar_mass_kg_per_mol = 0.09213842
         let solver = BubbleDewSolver::new(&eos as &dyn KProvider, &db);
         let x = vec![0.5, 0.5];
         let p = Pressure::new::<atmosphere>(1.0);
-        let tb = solver.bubble_point_temperature(p, &x).unwrap().temperature.value;
-        let td = solver.dew_point_temperature(p, &x).unwrap().temperature.value;
+        let tb = solver
+            .bubble_point_temperature(p, &x)
+            .unwrap()
+            .temperature
+            .value;
+        let td = solver
+            .dew_point_temperature(p, &x)
+            .unwrap()
+            .temperature
+            .value;
         (tb, td)
     }
 

@@ -4,10 +4,12 @@ use crate::alpha::soave;
 use crate::cubic_solver::CubicModel;
 use crate::engine::CubicEos;
 use crate::mixing::{CubicMixing, VdwMixing};
-use tpt_thermo_core::component::ComponentDatabase;
-use tpt_thermo_core::quantities::{MolarEnergy, MolarEntropy, MolarHeatCapacity, MolarVolume, Pressure, Temperature, Velocity};
-use tpt_thermo_core::{EquationOfState, ThermoError};
 use alloc::boxed::Box;
+use tpt_thermo_core::component::ComponentDatabase;
+use tpt_thermo_core::quantities::{
+    MolarEnergy, MolarEntropy, MolarHeatCapacity, MolarVolume, Pressure, Temperature, Velocity,
+};
+use tpt_thermo_core::{EquationOfState, ThermoError};
 
 /// Soave-Redlich-Kwong cubic equation of state:
 /// `P = RT/(v−b) − aα/(v² + bv)`.
@@ -77,12 +79,7 @@ impl EquationOfState for SoaveRedlichKwong {
     fn num_components(&self) -> usize {
         self.inner.num_components()
     }
-    fn pressure(
-        &self,
-        t: Temperature,
-        v: MolarVolume,
-        z: &[f64],
-    ) -> Result<Pressure, ThermoError> {
+    fn pressure(&self, t: Temperature, v: MolarVolume, z: &[f64]) -> Result<Pressure, ThermoError> {
         self.inner.pressure(t, v, z)
     }
     fn ln_fugacity_coefficient(
