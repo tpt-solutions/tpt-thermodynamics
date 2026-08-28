@@ -70,7 +70,7 @@ impl FloryHuggins {
         let phi = self.volume_fractions(&x);
         (0..n)
             .map(|i| {
-                let combinatorial = phi[i].ln() + (1.0 - 1.0 / self.r[i]) * (1.0 - phi[i]);
+                let combinatorial = (phi[i] / x[i]).ln() + (1.0 - 1.0 / self.r[i]) * (1.0 - phi[i]);
                 let interaction: f64 = (0..n)
                     .filter(|&j| j != i)
                     .map(|j| self.chi[i][j] * phi[j] * phi[j])
@@ -92,15 +92,27 @@ mod tests {
 
     #[test]
     fn binary_reduces_to_classic_form() {
-        // Polymer (r=1000) + solvent (r=1), χ=0.4, φ_solvent = 0.99.
+        // Polymer (r=1000) + solvent (r=1), χ=0.4. With 1% polymer by mole the
+        // *volume* fraction of solvent is ~0.09 (polymer dominates volume).
         let fh = FloryHuggins::new_scalar(vec![1000.0, 1.0], 0.4);
         let x = [0.01, 0.99]; // 1% polymer by mole
         let phi = fh.volume_fractions(&x);
-        assert!((phi[1] - 0.99).abs() < 1e-6, "φ_solvent = {}", phi[1]);
+        let phi_solvent = (x[1] * 1.0) / (x[0] * 1000.0 + x[1] * 1.0);
+        assert!(
+            (phi[1] - phi_solvent).abs() < 1e-6,
+            "φ_solvent = {}",
+            phi[1]
+        );
         let ln_g = fh.ln_gamma(&x);
-        // ln γ_solvent = ln φ_2 + (1 - 1/r_2) φ_1 + χ φ_1²  (r_2 = 1 → middle term 0)
-        let expected = phi[1].ln() + 0.4 * phi[0] * phi[0];
-        assert!((ln_g[1] - expected).abs() < 1e-9, "got {} exp {}", ln_g[1], expected);
+        // Multicomponent-generalised FH: ln γ_solvent = ln(φ_2/x_2) + χ·φ_1²
+        // (r_2 = 1 ⇒ combinatorial middle term vanishes).
+        let expected = (phi[1] / x[1]).ln() + 0.4 * phi[0] * phi[0];
+        assert!(
+            (ln_g[1] - expected).abs() < 1e-9,
+            "got {} exp {}",
+            ln_g[1],
+            expected
+        );
         assert!(ln_g[0] > 0.0, "polymer γ must be > 1 (poor solvent) here");
     }
 

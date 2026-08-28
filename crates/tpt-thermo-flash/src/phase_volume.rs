@@ -23,13 +23,7 @@ pub enum Phase {
 }
 
 /// Residual `P(v) − target` for the root find.
-fn f<E: EquationOfState + ?Sized>(
-    eos: &E,
-    t: Temperature,
-    p: Pressure,
-    z: &[f64],
-    v: f64,
-) -> f64 {
+fn f<E: EquationOfState + ?Sized>(eos: &E, t: Temperature, p: Pressure, z: &[f64], v: f64) -> f64 {
     match eos.pressure(t, MolarVolume::new::<cubic_meter_per_mole>(v), z) {
         Ok(pv) => pv.value - p.value,
         Err(_) => f64::NAN,
@@ -66,13 +60,7 @@ pub fn phase_volume<E: EquationOfState + ?Sized>(
             // Bisection on the bracket: it converges on the bracket *width*, which is
             // robust regardless of the (large) scale of `P(v) − P`, unlike a tight
             // absolute residual tolerance.
-            if let Ok(r) = bisection(
-                |vv| f(eos, t, p, z, vv),
-                v_prev,
-                v,
-                1e-12,
-                200,
-            ) {
+            if let Ok(r) = bisection(|vv| f(eos, t, p, z, vv), v_prev, v, 1e-12, 200) {
                 if r > 0.0 {
                     roots.push(r);
                 }

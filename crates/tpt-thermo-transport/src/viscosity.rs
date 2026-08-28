@@ -20,9 +20,7 @@ fn component_params(db: &dyn ComponentDatabase) -> Result<Vec<LjParams>, ThermoE
 /// Reduced collision integral `Ω_η(T*)` (Neufeld et al. 1972).
 fn collision_integral(tr: f64) -> f64 {
     let t = tr.max(1e-3);
-    1.16145 * t.powf(-0.14874)
-        + 0.52487 * (-0.7732 * t).exp()
-        + 2.1611 * (-2.43787 * t).exp()
+    1.16145 * t.powf(-0.14874) + 0.52487 * (-0.7732 * t).exp() + 2.1611 * (-2.43787 * t).exp()
 }
 
 /// Dilute-gas viscosity via Chung et al. (1988), mixture form.
@@ -124,11 +122,7 @@ pub fn lucas_liquid_viscosity(
 }
 
 /// Wilke (1950) mixture viscosity from pure-component viscosities (Pa·s).
-pub fn wilke_mixture_viscosity(
-    pure_viscosity: &[f64],
-    molar_masses: &[f64],
-    x: &[f64],
-) -> f64 {
+pub fn wilke_mixture_viscosity(pure_viscosity: &[f64], molar_masses: &[f64], x: &[f64]) -> f64 {
     let n = pure_viscosity.len();
     let mut eta = 0.0_f64;
     let mut denom = 0.0_f64;
@@ -179,7 +173,7 @@ pub fn mason_saxena_mixture_viscosity(
             let mm = (molar_masses[i] / molar_masses[j]).sqrt();
             let phi = ((1.0 + (pure_viscosity[i] / pure_viscosity[j]).sqrt() * mm)
                 / (2.0 * 2.0_f64.sqrt() * (1.0 + molar_masses[i] / molar_masses[j]).powf(0.25)))
-                .powf(0.6);
+            .powf(0.6);
             s += x[j] * phi;
         }
         if s > 0.0 {

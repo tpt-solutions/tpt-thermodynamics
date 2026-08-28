@@ -14,13 +14,11 @@ fn chung_gas_viscosity_nitrogen() {
     let mut z = vec![0.0_f64; db.num_components()];
     z[n2] = 1.0;
     let t = Temperature::new::<kelvin>(300.0);
-    let rho = tpt_thermo_transport::conductivity::ideal_molar_density(
-        t,
-        Pressure::new::<pascal>(1.0e5),
-    );
+    let rho =
+        tpt_thermo_transport::conductivity::ideal_molar_density(t, Pressure::new::<pascal>(1.0e5));
     let eta = tpt_thermo_transport::viscosity::chung_gas_viscosity(&db, t, rho, &z).unwrap();
     let v = eta.value; // Pa·s
-    // N2 at 300 K, 1 atm: ≈ 1.78e-5 Pa·s (Chung is within ~10%).
+                       // N2 at 300 K, 1 atm: ≈ 1.78e-5 Pa·s (Chung is within ~10%).
     assert!(
         (1.4e-5..2.2e-5).contains(&v),
         "N2 viscosity out of range: {v:e}"
@@ -36,10 +34,10 @@ fn fuller_diffusivity_n2_co2() {
     let co2 = db.index_of("carbon dioxide").unwrap();
     let t = Temperature::new::<kelvin>(298.15);
     let p = Pressure::new::<pascal>(1.0e5);
-    let d = tpt_thermo_transport::diffusivity::fuller_schettler_giddings(&db, t, p, n2, co2)
-        .unwrap();
+    let d =
+        tpt_thermo_transport::diffusivity::fuller_schettler_giddings(&db, t, p, n2, co2).unwrap();
     let v = d.value; // m²/s
-    // N2–CO2 at 298 K, 1 atm: ≈ 1.6e-5 m²/s.
+                     // N2–CO2 at 298 K, 1 atm: ≈ 1.6e-5 m²/s.
     assert!(
         (1.0e-5..2.3e-5).contains(&v),
         "N2-CO2 diffusivity out of range: {v:e}"
@@ -68,10 +66,8 @@ fn gas_thermal_conductivity_order_of_magnitude() {
     let mut z = vec![0.0_f64; db.num_components()];
     z[n2] = 1.0;
     let t = Temperature::new::<kelvin>(300.0);
-    let rho = tpt_thermo_transport::conductivity::ideal_molar_density(
-        t,
-        Pressure::new::<pascal>(1.0e5),
-    );
+    let rho =
+        tpt_thermo_transport::conductivity::ideal_molar_density(t, Pressure::new::<pascal>(1.0e5));
     let lambda =
         tpt_thermo_transport::conductivity::chung_gas_thermal_conductivity(&db, t, rho, &z)
             .unwrap();

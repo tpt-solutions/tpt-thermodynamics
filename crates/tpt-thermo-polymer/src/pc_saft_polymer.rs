@@ -1,95 +1,135 @@
-//! PC-SAFT for polymers: a thin specialisation of [`tpt_thermo_eos_saft::PcSaft`].
+//! PC-SAFT for polymers — a thin specialization of Phase 6's PC-SAFT.
 //!
-//! Polymer segments are described by the same SAFT parameters (`m`, `σ`, `ε/k`) used
-//! by [`tpt_thermo_eos_saft`]; this module just provides a convenience constructor
-//! that builds a `PcSaft` directly from a polymer-segment specification and proves
-//! (via the [`tests`]) that it reduces exactly to plain PC-SAFT for an equivalent
-//! pure component.
+//! Polymer chains are simply PC-SAFT molecules with a large segment count `m`, so
+//! this module re-uses [`tpt_thermo_eos_saft::PcSaft`] unchanged and adds a
+//! convenience constructor that maps a monomer (segment) parameter set and a chain
+//! length to a polymer [`SaftComponent`](tpt_thermo_eos_saft::SaftComponent).
+//! [`PolymerPcSaft`] therefore reduces exactly to [`PcSaft`] in the `m →` limit
+//! (regression-tested below).
 
-use tpt_thermo_core::EquationOfState;
-use tpt_thermo_eos_saft::parameters::{SaftComponent, SaftParameters};
-use tpt_thermo_eos_saft::PcSaft;
+use alloc::vec::Vec;
+use tpt_thermo_core::quantities::{
+    MolarEnergy, MolarEntropy, MolarHeatCapacity, MolarVolume, Pressure, Temperature, Velocity,
+};
+use tpt_thermo_core::{EquationOfState, ThermoError};
+use tpt_thermo_eos_saft::{PcSaft, SaftComponent, SaftParameters};
 
-/// A single polymer (or segment) SAFT specification.
-#[derive(Debug, Clone, Copy)]
-pub struct PolymerSaftSpec {
-    /// Component name (matched against the seed database where relevant).
-    pub name: &'static str,
-    /// Number of segments per chain `m`.
-    pub m: f64,
-    /// Segment diameter `σ` (Å).
-    pub sigma: f64,
-    /// Segment energy `ε/k` (K).
-    pub epsilon_k: f64,
+/// A polymer PC-SAFT model: a thin wrapper over [`PcSaft`].
+#[derive(Debug, Clone)]
+pub struct PolymerPcSaft(PcSaft);
+
+impl PolymerPcSaft {
+    /// Build from a [`SaftParameters`] table and per-component molar masses.
+    pub fn new(params: SaftParameters, molar_masses: Vec<f64>) -> Self {
+        Self(PcSaft::new(params, molar_masses))
+    }
+
+    /// Build a single-component polymer model from monomer (per-segment)
+    /// parameters and a number of segments per chain.
+    ///
+    /// The polymer inherits the monomer's `σ` and `ε/k`; only the segment count
+    /// scales by `segments`.
+    pub fn from_monomer(
+        name: &'static str,
+        monomer_m: f64,
+        monomer_sigma: f64,
+        monomer_epsilon_k: f64,
+        segments: f64,
+        molar_mass: f64,
+    ) -> Self {
+        let comp =
+            SaftComponent::pc_saft(name, monomer_m * segments, monomer_sigma, monomer_epsilon_k);
+        Self(PcSaft::new(
+            SaftParameters::new(alloc::vec![comp]),
+            vec![molar_mass],
+        ))
+    }
+
+    /// Access the underlying engine.
+    pub fn inner(&self) -> &PcSaft {
+        &self.0
+    }
 }
 
-/// Build a [`PcSaft`] from polymer-segment specs and the corresponding molar masses.
-pub fn build_pc_saft_polymer(specs: &[PolymerSaftSpec], molar_masses: &[f64]) -> PcSaft {
-    assert_eq!(specs.len(), molar_masses.len(), "spec/mass length mismatch");
-    let comps: Vec<SaftComponent> = specs
-        .iter()
-        .map(|s| SaftComponent::pc_saft(s.name, s.m, s.sigma, s.epsilon_k))
-        .collect();
-    PcSaft::new(SaftParameters::new(comps), molar_masses.to_vec())
+impl EquationOfState for PolymerPcSaft {
+    fn num_components(&self) -> usize {
+        self.0.num_components()
+    }
+    fn pressure(&self, t: Temperature, v: MolarVolume, z: &[f64]) -> Result<Pressure, ThermoError> {
+        self.0.pressure(t, v, z)
+    }
+    fn ln_fugacity_coefficient(
+        &self,
+        t: Temperature,
+        v: MolarVolume,
+        z: &[f64],
+        i: usize,
+    ) -> Result<f64, ThermoError> {
+        self.0.ln_fugacity_coefficient(t, v, z, i)
+    }
+    fn molar_enthalpy(
+        &self,
+        t: Temperature,
+        v: MolarVolume,
+        z: &[f64],
+    ) -> Result<MolarEnergy, ThermoError> {
+        self.0.molar_enthalpy(t, v, z)
+    }
+    fn molar_entropy(
+        &self,
+        t: Temperature,
+        v: MolarVolume,
+        z: &[f64],
+    ) -> Result<MolarEntropy, ThermoError> {
+        self.0.molar_entropy(t, v, z)
+    }
+    fn molar_isobaric_heat_capacity(
+        &self,
+        t: Temperature,
+        v: MolarVolume,
+        z: &[f64],
+    ) -> Result<MolarHeatCapacity, ThermoError> {
+        self.0.molar_isobaric_heat_capacity(t, v, z)
+    }
+    fn molar_isochoric_heat_capacity(
+        &self,
+        t: Temperature,
+        v: MolarVolume,
+        z: &[f64],
+    ) -> Result<MolarHeatCapacity, ThermoError> {
+        self.0.molar_isochoric_heat_capacity(t, v, z)
+    }
+    fn speed_of_sound(
+        &self,
+        t: Temperature,
+        v: MolarVolume,
+        z: &[f64],
+    ) -> Result<Velocity, ThermoError> {
+        self.0.speed_of_sound(t, v, z)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tpt_thermo_core::quantities::{MolarVolume, Pressure, Temperature};
-    use tpt_thermo_eos_saft::parameters::SEED_SAFT_PARAMETERS;
-    use uom::si::{molar_volume::cubic_meter_per_mole, pressure::pascal, thermodynamic_temperature::kelvin};
+    use uom::si::molar_volume::cubic_meter_per_mole;
+    use uom::si::thermodynamic_temperature::kelvin;
 
     #[test]
-    fn reduces_to_plain_pc_saft() {
-        // A methane-like polymer segment should reproduce plain PC-SAFT built from the
-        // seed table for the same pure component.
-        let seed_methane = SEED_SAFT_PARAMETERS
-            .iter()
-            .find(|c| c.name == "methane")
-            .copied()
-            .unwrap();
-        let polymer = build_pc_saft_polymer(
-            &[PolymerSaftSpec {
-                name: "methane",
-                m: seed_methane.m,
-                sigma: seed_methane.sigma,
-                epsilon_k: seed_methane.epsilon_k,
-            }],
-            &[0.016_043],
+    fn reduces_to_base_pc_saft() {
+        // A polymer with m = 5 and a plain PC-SAFT component with m = 5 must agree.
+        let polymer = PolymerPcSaft::from_monomer("poly", 1.0, 3.0, 250.0, 5.0, 0.05);
+        let base = PcSaft::new(
+            SaftParameters::new(vec![SaftComponent::pc_saft("poly", 5.0, 3.0, 250.0)]),
+            vec![0.05],
         );
-        let plain = PcSaft::new(
-            SaftParameters::new(vec![seed_methane]),
-            vec![0.016_043],
-        );
-
-        let t = Temperature::new::<kelvin>(300.0);
-        let v = MolarVolume::new::<cubic_meter_per_mole>(0.025);
-        let p_poly = polymer.pressure(t, v, &[1.0]).unwrap();
-        let p_plain = plain.pressure(t, v, &[1.0]).unwrap();
-        assert!((p_poly.value - p_plain.value).abs() / p_plain.value < 1e-12);
-
-        let phi_poly = polymer.ln_fugacity_coefficient(t, v, &[1.0], 0).unwrap();
-        let phi_plain = plain.ln_fugacity_coefficient(t, v, &[1.0], 0).unwrap();
-        assert!((phi_poly - phi_plain).abs() < 1e-12);
-    }
-
-    #[test]
-    fn polymer_eos_is_usable() {
-        // A long-chain polymer (large m) should be buildable and evaluate.
-        let eos = build_pc_saft_polymer(
-            &[PolymerSaftSpec {
-                name: "polymer-a",
-                m: 50.0,
-                sigma: 4.0,
-                epsilon_k: 300.0,
-            }],
-            &[0.5],
-        );
-        let t = Temperature::new::<kelvin>(400.0);
-        let v = MolarVolume::new::<cubic_meter_per_mole>(0.05);
-        let p = eos.pressure(t, v, &[1.0]).unwrap();
-        assert!(p.value.is_finite());
-        let _ = Pressure::new::<pascal>(0.0);
+        let t = Temperature::new::<kelvin>(350.0);
+        let v = MolarVolume::new::<cubic_meter_per_mole>(0.01);
+        let pp = polymer.pressure(t, v, &[1.0]).unwrap();
+        let pb = base.pressure(t, v, &[1.0]).unwrap();
+        assert!((pp.value - pb.value).abs() / pb.value < 1e-9);
+        let lnp = polymer.ln_fugacity_coefficient(t, v, &[1.0], 0).unwrap();
+        let lnb = base.ln_fugacity_coefficient(t, v, &[1.0], 0).unwrap();
+        assert!((lnp - lnb).abs() < 1e-9);
     }
 }

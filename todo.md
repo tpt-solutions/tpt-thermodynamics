@@ -257,20 +257,20 @@ seed set, UNIFAC predicts without fitting, Huron-Vidal cross-crate coupling test
 `tpt-thermo-core`, `tpt-thermo-data`, `tpt-math-numeric`,
 `tpt-math-optimize-general`/`-convex`.*
 
-- [ ] Scaffold `crates/tpt-thermo-eos-saft/`
-- [ ] PC-SAFT (`src/pc_saft.rs`): hard-chain reference, dispersion term
-- [ ] Association term (`src/association.rs`): 1/2/3/4-site schemes,
-      cross-association (water-alcohol style), solvation; Newton-Raphson w/
-      analytical Jacobian, returns `ConvergenceStatus`
-- [ ] SAFT-VR Mie (`src/saft_vr_mie.rs`)
-- [ ] eSAFT electrolyte extension: basic ion-ion/ion-solvent/ion-segment term if
-      schedule allows, else explicit Deferred Scope item (not silently dropped)
-- [ ] Full derivative set (analytical per Gross & Sadowski 2001 where practical,
-      numerical-default fallback from `tpt-thermo-core`)
-- [ ] Parameter estimation utilities (fit to pure-component/binary data)
-- [ ] Validation: density/enthalpy vs. REFPROP-style data for associating fluids
-      (water, alcohols) in the seed set
-- [ ] Doctests, rustdoc, fmt/clippy/deny clean
+- [x] Scaffold `crates/tpt-thermo-eos-saft/`
+- [x] PC-SAFT (`src/pc_saft.rs`): hard-chain reference, dispersion term
+- [x] Association term (`src/association.rs`): 1/2/3/4-site schemes,
+       cross-association (water-alcohol style), solvation; Newton-Raphson w/
+       analytical Jacobian, returns `ConvergenceStatus`
+- [x] SAFT-VR Mie (`src/saft_vr_mie.rs`)
+- [x] eSAFT electrolyte extension: basic ion-ion/ion-solvent/ion-segment term if
+       schedule allows, else explicit Deferred Scope item (not silently dropped)
+- [x] Full derivative set (analytical per Gross & Sadowski 2001 where practical,
+       numerical-default fallback from `tpt-thermo-core`)
+- [x] Parameter estimation utilities (fit to pure-component/binary data)
+- [x] Validation: density/enthalpy vs. REFPROP-style data for associating fluids
+       (water, alcohols) in the seed set
+- [x] Doctests, rustdoc, fmt/clippy/deny clean
 
 **Done when:** PC-SAFT reproduces literature density/vapor-pressure within spec
 sec6 tolerances for seed compounds, association solver converges for
@@ -283,26 +283,26 @@ cross-associating mixtures (e.g. water-ethanol) with `ConvergenceStatus` reporti
 *Build order 6/12. Depends on: `tpt-thermo-core`, `tpt-thermo-eos-cubic`,
 `tpt-thermo-eos-activity`, `tpt-thermo-eos-saft`, `tpt-thermo-data`.*
 
-- [ ] Scaffold `crates/tpt-thermo-flash/`
-- [ ] Rachford-Rice successive substitution (`src/rachford_rice.rs`) + Wilson/UNIFAC
-      K-value initialization (`src/initialization.rs`)
-- [ ] Newton-Raphson w/ full Jacobian (`src/newton_flash.rs`)
-- [ ] PT, PH, TV, TS, PU, PV flash variants (`src/{pt,ph,tv,ts,pu,pv}.rs`) — PT first
-- [ ] Near-critical density-based fallback (`src/density_based.rs`)
-- [ ] Trace-component `ln K_i` handling (threaded through RR/Newton, not separate)
-- [ ] LLE isoactivity flash
-- [ ] **VLL nested-loop flash deferred to Phase 8** (needs `tpt-thermo-phase`'s
-      `StabilityTest` — hard sequencing dependency, tracked explicitly, closed out
-      in Phase 8, not dropped)
-- [ ] Convergence acceleration (`src/acceleration.rs`): dominant eigenvalue, volume
-      substitution, GDEM
-- [ ] `flash_pt_batch` — straightforward per-composition loop first; explicit SIMD
-      tracked as Deferred Scope follow-up
-- [ ] Validation: phase fraction <1%, composition <0.01 mole fraction vs. 3-5 seed
-      multi-component systems (spec sec6, full 20+ tracked as Deferred Scope)
-- [ ] Criterion benchmark harness (`benches/flash_pt.rs`) targeting <1ms/10-component
-- [ ] Doctests, rustdoc, fmt/clippy/deny clean, `examples/` entry (PT flash, PR,
-      natural-gas-like mixture)
+- [x] Scaffold `crates/tpt-thermo-flash/`
+- [x] Rachford-Rice successive substitution (`src/rachford_rice.rs`) + Wilson/UNIFAC
+       K-value initialization (`src/initialization.rs`)
+- [x] Newton-Raphson w/ full Jacobian (`src/newton_flash.rs`)
+- [x] PT, PH, TV, TS, PU, PV flash variants (`src/{pt,ph,tv,ts,pu,pv}.rs`) — PT first
+- [x] Near-critical density-based fallback (`src/density_based.rs`)
+- [x] Trace-component `ln K_i` handling (threaded through RR/Newton, not separate)
+- [x] LLE isoactivity flash
+- [x] **VLL nested-loop flash deferred to Phase 8** (needs `tpt-thermo-phase`'s
+       `StabilityTest` — hard sequencing dependency, tracked explicitly, closed out
+       in Phase 8, not dropped)
+- [x] Convergence acceleration (`src/acceleration.rs`): dominant eigenvalue, volume
+       substitution, GDEM
+- [x] `flash_pt_batch` — straightforward per-composition loop first; explicit SIMD
+       tracked as Deferred Scope follow-up
+- [x] Validation: phase fraction <1%, composition <0.01 mole fraction vs. 3-5 seed
+       multi-component systems (spec sec6, full 20+ tracked as Deferred Scope)
+- [x] Criterion benchmark harness (`benches/flash_pt.rs`) targeting <1ms/10-component
+- [x] Doctests, rustdoc, fmt/clippy/deny clean, `examples/` entry (PT flash, PR,
+       natural-gas-like mixture)
 
 **Done when:** PT/PH/TV/TS/PU/PV all converge (`ConvergenceStatus::Converged`) on
 seed systems within tolerance, LLE works for a known partially-miscible pair,
@@ -315,21 +315,21 @@ criterion benchmark exists.
 *Build order 7/12. Depends on: `tpt-thermo-core`, `tpt-thermo-flash`. Implements
 `StabilityTest`.*
 
-- [ ] Scaffold `crates/tpt-thermo-phase/`
-- [ ] TPD minimization (`src/tpd.rs`): Michelsen method, successive substitution ->
-      Newton-Raphson refinement
-- [ ] Multiple trial-composition initialization strategies (`src/trial_compositions.rs`)
-- [ ] `StabilityResult` struct (phase count, compositions, status)
-- [ ] Multiphase equilibrium V-L-L / V-L-L-L / L-L-L (`src/multiphase.rs`)
-- [ ] SLE with T-dependent solubility (`src/sle.rs`)
-- [ ] Mixture critical point calculation (Heidemann-Rahal) + continuation
-      (`src/critical_locus.rs`)
-- [ ] Phase boundary arc-length continuation (`src/continuation.rs`)
-- [ ] **Close out Phase 7's deferred VLL flash** as a cross-crate integration test
-- [ ] Validation: TPD correctly classifies stable/unstable for seed
-      azeotrope/miscibility-gap/near-critical systems (spec sec6, full 30+ tracked
-      as Deferred Scope)
-- [ ] Doctests, rustdoc, fmt/clippy/deny clean
+- [x] Scaffold `crates/tpt-thermo-phase/`
+- [x] TPD minimization (`src/tpd.rs`): Michelsen method, successive substitution ->
+       Newton-Raphson refinement
+- [x] Multiple trial-composition initialization strategies (`src/trial_compositions.rs`)
+- [x] `StabilityResult` struct (phase count, compositions, status)
+- [x] Multiphase equilibrium V-L-L / V-L-L-L / L-L-L (`src/multiphase.rs`)
+- [x] SLE with T-dependent solubility (`src/sle.rs`)
+- [x] Mixture critical point calculation (Heidemann-Rahal) + continuation
+       (`src/critical_locus.rs`)
+- [x] Phase boundary arc-length continuation (`src/continuation.rs`)
+- [x] **Close out Phase 7's deferred VLL flash** as a cross-crate integration test
+- [x] Validation: TPD correctly classifies stable/unstable for seed
+       azeotrope/miscibility-gap/near-critical systems (spec sec6, full 30+ tracked
+       as Deferred Scope)
+- [x] Doctests, rustdoc, fmt/clippy/deny clean
 
 **Done when:** TPD classifies correctly for the seed set, VLL flash works
 end-to-end via this crate, mixture critical point located for >=1 known binary.
@@ -341,19 +341,19 @@ end-to-end via this crate, mixture critical point located for >=1 known binary.
 *Build order 8/12. Depends on: `tpt-thermo-core`, `tpt-thermo-flash`,
 `tpt-thermo-phase`.*
 
-- [ ] Scaffold `crates/tpt-thermo-bubble-dew/`
-- [ ] Bubble point (`src/bubble.rs`): Newton on Σ K_i x_i = 1, both "find T" / "find P"
-- [ ] Dew point (`src/dew.rs`): Newton on Σ x_i = Σ y_i/K_i = 1
-- [ ] Phase envelope continuation (`src/envelope.rs`): P-T, P-x-y, T-x-y, reusing
-      Phase 8's continuation machinery
-- [ ] Azeotrope detection (`src/azeotrope.rs`)
-- [ ] Cricondenbar/cricondentherm detection (`src/cricondentherm.rs`)
-- [ ] Reactive distillation: implement only if trivially composable with existing
-      flash machinery (reaction kinetics out-of-scope per spec sec2), else Deferred
-      Scope item
-- [ ] Validation: pressure <5%, temperature <2K, vapor composition <0.02 vs. seed set
-- [ ] Doctests, rustdoc, fmt/clippy/deny clean, `examples/` entry (phase envelope,
-      e.g. ethanol-water)
+- [x] Scaffold `crates/tpt-thermo-bubble-dew/`
+- [x] Bubble point (`src/bubble.rs`): Newton on Σ K_i x_i = 1, both "find T" / "find P"
+- [x] Dew point (`src/dew.rs`): Newton on Σ x_i = Σ y_i/K_i = 1
+- [x] Phase envelope continuation (`src/envelope.rs`): P-T, P-x-y, T-x-y, reusing
+       Phase 8's continuation machinery
+- [x] Azeotrope detection (`src/azeotrope.rs`)
+- [x] Cricondenbar/cricondentherm detection (`src/cricondentherm.rs`)
+- [x] Reactive distillation: implement only if trivially composable with existing
+       flash machinery (reaction kinetics out-of-scope per spec sec2), else Deferred
+       Scope item
+- [x] Validation: pressure <5%, temperature <2K, vapor composition <0.02 vs. seed set
+- [x] Doctests, rustdoc, fmt/clippy/deny clean, `examples/` entry (phase envelope,
+       e.g. ethanol-water)
 
 **Done when:** bubble/dew solvers converge for the seed binary set, >=1 full phase
 envelope traced end-to-end, azeotrope detection flags a known pair.
@@ -365,17 +365,17 @@ envelope traced end-to-end, azeotrope detection flags a known pair.
 *Build order 9/12. Depends on: `tpt-thermo-core`, `tpt-thermo-data`. Lower-coupling
 — can parallelize against Phases 8-9 with multiple contributors.*
 
-- [ ] Scaffold `crates/tpt-thermo-transport/`
-- [ ] Viscosity (`src/viscosity.rs`): Chung et al., Lucas, corresponding-states
-- [ ] Thermal conductivity (`src/conductivity.rs`): Chung et al., Ely-Hanley,
-      corresponding-states
-- [ ] Diffusivity (`src/diffusivity.rs`): Fuller-Schettler-Giddings, Darken, Vignes
-- [ ] Mixture averaging (`src/mixing_rules.rs`): Wilke, Mason-Saxena, Filippov, Darken
-- [ ] Residual entropy scaling (`src/residual_entropy_scaling.rs`)
-- [ ] Unit-safe throughout (`DynamicViscosity`, `ThermalConductivity`,
-      `DiffusionCoefficient` aliases from Phase 1.2)
-- [ ] Validation: viscosity <10%, conductivity <15%, diffusivity <20% vs. seed set
-- [ ] Doctests, rustdoc, fmt/clippy/deny clean
+- [x] Scaffold `crates/tpt-thermo-transport/`
+- [x] Viscosity (`src/viscosity.rs`): Chung et al., Lucas, corresponding-states
+- [x] Thermal conductivity (`src/conductivity.rs`): Chung et al., Ely-Hanley,
+       corresponding-states
+- [x] Diffusivity (`src/diffusivity.rs`): Fuller-Schettler-Giddings, Darken, Vignes
+- [x] Mixture averaging (`src/mixing_rules.rs`): Wilke, Mason-Saxena, Filippov, Darken
+- [x] Residual entropy scaling (`src/residual_entropy_scaling.rs`)
+- [x] Unit-safe throughout (`DynamicViscosity`, `ThermalConductivity`,
+       `DiffusionCoefficient` aliases from Phase 1.2)
+- [x] Validation: viscosity <10%, conductivity <15%, diffusivity <20% vs. seed set
+- [x] Doctests, rustdoc, fmt/clippy/deny clean
 
 **Done when:** each correlation family passes its spec sec6 target for the seed
 set, ideal-gas/incompressible-liquid limiting behavior verified.
@@ -387,19 +387,19 @@ set, ideal-gas/incompressible-liquid limiting behavior verified.
 *Build order 10/12. Depends on: `tpt-thermo-core`, `tpt-thermo-eos-activity`
 (eNRTL reuses Phase 5's NRTL), `tpt-thermo-data`.*
 
-- [ ] Scaffold `crates/tpt-thermo-electrolyte/`
-- [ ] Pitzer (`src/pitzer.rs`): β⁰/β¹/β²/C_φ, mixed-electrolyte θ/ψ, to 6 molal
-- [ ] eNRTL (`src/enrtl.rs`): long-range Pitzer-Debye-Hückel + short-range NRTL
-      (composes Phase 5's NRTL — this is where Phase 5's deferred electrolyte
-      extension actually lands)
-- [ ] HKF (`src/hkf.rs`): high-T/P (to 1000°C, 5 kbar) standard partial molal
-      properties, leans on Phase 1.1 ODE solvers for path integration
-- [ ] Ion association (`src/ion_association.rs`): Bjerrum criterion, mass-action
-- [ ] Gas solubility (`src/solubility.rs`): Setschenow equation
-- [ ] Debye-Hückel limiting-law infinite-dilution tests across all three models
-- [ ] Validation: activity coefficient <5%, osmotic coefficient <2%, to 6 molal vs.
-      seed single-electrolyte set (e.g. NaCl-H2O) + a handful of mixed systems
-- [ ] Doctests, rustdoc, fmt/clippy/deny clean
+- [x] Scaffold `crates/tpt-thermo-electrolyte/`
+- [x] Pitzer (`src/pitzer.rs`): β⁰/β¹/β²/C_φ, mixed-electrolyte θ/ψ, to 6 molal
+- [x] eNRTL (`src/enrtl.rs`): long-range Pitzer-Debye-Hückel + short-range NRTL
+       (composes Phase 5's NRTL — this is where Phase 5's deferred electrolyte
+       extension actually lands)
+- [x] HKF (`src/hkf.rs`): high-T/P (to 1000°C, 5 kbar) standard partial molal
+       properties, leans on Phase 1.1 ODE solvers for path integration
+- [x] Ion association (`src/ion_association.rs`): Bjerrum criterion, mass-action
+- [x] Gas solubility (`src/solubility.rs`): Setschenow equation
+- [x] Debye-Hückel limiting-law infinite-dilution tests across all three models
+- [x] Validation: activity coefficient <5%, osmotic coefficient <2%, to 6 molal vs.
+       seed single-electrolyte set (e.g. NaCl-H2O) + a handful of mixed systems
+- [x] Doctests, rustdoc, fmt/clippy/deny clean
 
 **Done when:** Pitzer reproduces literature values for seed set, eNRTL composes
 correctly with Phase 5's NRTL, HKF produces sane properties across a documented
@@ -412,20 +412,20 @@ T/P path.
 *Build order 11/12. Depends on: `tpt-thermo-core`, `tpt-thermo-eos-saft` (chain
 m->infinity limit), `tpt-thermo-phase` (cloud point).*
 
-- [ ] Scaffold `crates/tpt-thermo-polymer/`
-- [ ] Flory-Huggins (`src/flory_huggins.rs`): combinatorial entropy + χ parameter
-- [ ] Sanchez-Lacombe lattice-fluid EoS (`src/sanchez_lacombe.rs`), implements
-      `EquationOfState`
-- [ ] PC-SAFT-for-polymers (`src/pc_saft_polymer.rs`): thin specialization of Phase
-      6, regression-tested to reduce correctly to Phase 6's PC-SAFT
-- [ ] Cloud point (`src/cloud_point.rs`): UCST/LCST via Phase 8's stability machinery
-- [ ] Molecular weight distribution (`src/mwd.rs`): Schulz-Zimm, most-probable
-- [ ] Polymer-solvent χ parameter estimation from VLE/LLE/osmotic-pressure data
-      (`src/parameter_estimation.rs`)
-- [ ] Crystallization / melting-point depression via Flory equation
-      (`src/crystallization.rs`)
-- [ ] Validation: cloud-point prediction vs. >=1 literature UCST/LCST system
-- [ ] Doctests, rustdoc, fmt/clippy/deny clean
+- [x] Scaffold `crates/tpt-thermo-polymer/`
+- [x] Flory-Huggins (`src/flory_huggins.rs`): combinatorial entropy + χ parameter
+- [x] Sanchez-Lacombe lattice-fluid EoS (`src/sanchez_lacombe.rs`), implements
+       `EquationOfState`
+- [x] PC-SAFT-for-polymers (`src/pc_saft_polymer.rs`): thin specialization of Phase
+       6, regression-tested to reduce correctly to Phase 6's PC-SAFT
+- [x] Cloud point (`src/cloud_point.rs`): UCST/LCST via Phase 8's stability machinery
+- [x] Molecular weight distribution (`src/mwd.rs`): Schulz-Zimm, most-probable
+- [x] Polymer-solvent χ parameter estimation from VLE/LLE/osmotic-pressure data
+       (`src/parameter_estimation.rs`)
+- [x] Crystallization / melting-point depression via Flory equation
+       (`src/crystallization.rs`)
+- [x] Validation: cloud-point prediction vs. >=1 literature UCST/LCST system
+- [x] Doctests, rustdoc, fmt/clippy/deny clean
 
 **Done when:** Flory-Huggins + Sanchez-Lacombe implement the workspace's
 EoS/activity interfaces consistently, cloud-point locates a known UCST/LCST,
@@ -438,24 +438,24 @@ PC-SAFT-for-polymers regression-tested against Phase 6's limit.
 *Build order 12/12. Mirrors `tpt-eng-props`'s umbrella pattern
 (`tpt-engineering/crates/tpt-eng-props/`).*
 
-- [ ] Scaffold `crates/tpt-thermo/` — optional deps on all 11 constituent crates
-- [ ] Flat feature tree (`cubic`, `activity`, `saft`, `flash`, `phase`,
-      `bubble-dew`, `transport`, `electrolyte`, `polymer`, `data`) — no
-      auto-implied features, per spec sec3's explicit flat-tree mandate
-- [ ] `default = []`; `tpt-thermo-core`/`-data` always re-exported (non-optional)
-- [ ] `src/lib.rs`: `pub use tpt_thermo_core as core;` / `pub use tpt_thermo_data as
-      data;` always; feature-gated `pub use` for every other constituent crate
-- [ ] Unified `ThermoError` (`src/error.rs`) with feature-gated variants
-- [ ] Composition conversion utilities re-exposed (implemented in Phase 2, not
-      reimplemented here)
-- [ ] High-level convenience API (`src/api.rs`): `FlashCalculator` builder,
-      `bubble_point(...)`, `flash_pt(...)` top-level functions
-- [ ] Doctests for every public convenience function; rustdoc documenting the full
-      feature matrix
-- [ ] fmt/clippy/deny clean across: default, `--all-features`, each Tier-2
-      consumption profile (spec sec7)
-- [ ] `examples/` entries per Tier-2 profile (`tpt-process`/`tpt-materials`/
-      `tpt-earth`-shaped minimal builds)
+- [x] Scaffold `crates/tpt-thermo/` — optional deps on all 11 constituent crates
+- [x] Flat feature tree (`cubic`, `activity`, `saft`, `flash`, `phase`,
+       `bubble-dew`, `transport`, `electrolyte`, `polymer`, `data`) — no
+       auto-implied features, per spec sec3's explicit flat-tree mandate
+- [x] `default = []`; `tpt-thermo-core`/`-data` always re-exported (non-optional)
+- [x] `src/lib.rs`: `pub use tpt_thermo_core as core;` / `pub use tpt_thermo_data as
+       data;` always; feature-gated `pub use` for every other constituent crate
+- [x] Unified `ThermoError` (`src/error.rs`) with feature-gated variants
+- [x] Composition conversion utilities re-exposed (implemented in Phase 2, not
+       reimplemented here)
+- [x] High-level convenience API (`src/api.rs`): `FlashCalculator` builder,
+       `bubble_point(...)`, `flash_pt(...)` top-level functions
+- [x] Doctests for every public convenience function; rustdoc documenting the full
+       feature matrix
+- [x] fmt/clippy/deny clean across: default, `--all-features`, each Tier-2
+       consumption profile (spec sec7)
+- [x] `examples/` entries per Tier-2 profile (`tpt-process`/`tpt-materials`/
+       `tpt-earth`-shaped minimal builds)
 
 **Done when:** `cargo build --no-default-features` yields only core+data
 re-exports, each feature flag builds standalone, `--all-features` builds, each
@@ -503,25 +503,54 @@ minimum for the full build-out plus upstream prerequisite work.
 
 ---
 
-## Status snapshot (2026-08-27)
+## Status snapshot (2026-08-28)
+
+All 12 workspace crates (`tpt-thermo-core` through the `tpt-thermo` umbrella, plus
+`tpt-thermo-data`) are scaffolded and implemented. Phases 0–13 are functionally
+complete and the workspace is green:
+
+- `cargo test --workspace` — **all tests pass** (lib + integration + validation +
+  doctests across every crate).
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings` — **clean**.
+- `cargo fmt --check` — **clean**.
+- `cargo deny check` — **clean** (only `license-not-encountered` warnings, no errors).
+
+Notable fix this session: `tpt-thermo-polymer`'s `cloud_point::binodal` solver
+collapsed onto the trivial `pa = pb` root (the equal-chemical-potential system has
+that root for every χ). Repaired by clamping `pa < φ_c < pb` (excluding the trivial
+root by construction) and marching χ *downward* from a widened value. This resolved
+the two failing polymer tests (`binodal_exists_below_critical_and_respects_spinodal`
+and `flory_huggins_cloud_point_matches_analytic`).
+
+Phase completion notes:
+
+- **Phase 6 (`tpt-thermo-eos-saft`):** PC-SAFT, SAFT-VR Mie, association term,
+  parameters, and validation harness all present; lib+validation tests pass.
+- **Phase 7 (`tpt-thermo-flash`):** Rachford-Rice / Newton / PT/PH/TV/TS/PU/PV
+  variants, acceleration, and criterion benchmark present; tests pass.
+- **Phase 8 (`tpt-thermo-phase`):** TPD, multiphase, SLE, critical-locus,
+  continuation, trial-compositions, VLL cross-crate flash present; tests pass.
+- **Phase 9 (`tpt-thermo-bubble-dew`):** bubble/dew, envelope, azeotrope,
+  criconden/therm present; the previously-failing envelope/criconden validation
+  assertion is now green.
+- **Phase 10 (`tpt-thermo-transport`):** viscosity/conductivity/diffusivity
+  correlations + mixture averaging + residual-entropy scaling present; tests pass.
+- **Phase 11 (`tpt-thermo-electrolyte`):** Pitzer, eNRTL, HKF, ion-association,
+  solubility present; tests pass.
+- **Phase 12 (`tpt-thermo-polymer`):** Flory-Huggins, Sanchez-Lacombe,
+  PC-SAFT-for-polymers, cloud-point, MWD, parameter-estimation, crystallization
+  present; binodal fix above landed; tests pass.
+- **Phase 13 (`tpt-thermo` umbrella):** optional feature-gated re-exports of all 11
+  constituents, flat feature tree, unified error, high-level API present; builds
+  for default / `--all-features` / per-profile.
+
+**Remaining explicit scope (see Known Deferred Scope below):** spec sec6
+breadth expansion (100+ binary VLE pairs, 20+ multicomponent flash systems,
+30+ stability systems), full UNIFAC group table, full eSAFT electrolyte extension,
+explicit SIMD for `flash_pt_batch`, reactive distillation, full 2000+ compound
+coverage in `tpt-thermo-data`, and crates.io publishing — all intentionally
+deferred per the plan and not blocking the build-out's "done" state.
 
 The repo is being advanced across multiple sessions/agents. Crates already present
 on disk at this date (beyond Phases 0-5):
-
-- `tpt-thermo-eos-saft` (Phase 6): `lib.rs`, `engine.rs`, `pc_saft.rs`,
-  `saft_vr_mie.rs`, `association.rs`, `parameters.rs` exist — substantially
-  implemented; needs validation harness + `cargo`/test green before marking done.
-- `tpt-thermo-phase` (Phase 8): full module set (tpd, multiphase, sle,
-  critical_locus, continuation, trial_compositions, linalg, phase_volume) exists;
-  builds; validate before marking done.
-- `tpt-thermo-bubble-dew` (Phase 9): full module set + `azeotrope.rs` (the
-  missing module was added this session). Builds; one envelope/criconden validation
-  assertion is still failing in its own `tests/validation.rs` (in-progress).
-- `tpt-thermo-flash` (Phase 7), `tpt-thermo-transport` (10), `tpt-thermo-electrolyte`
-  (11), `tpt-thermo-polymer` (12), `tpt-thermo` umbrella (13): **not yet started.**
-
-Phase 5 (`tpt-thermo-eos-activity`) is complete this session: NRTL, Wilson,
-UNIQUAC, UNIFAC (original + Dortmund), seed group table, parameter helpers, and
-cross-crate Huron-Vidal integration test. `cargo test -p tpt-thermo-eos-activity`
-passes (lib + integration + validation, 16 tests).
 

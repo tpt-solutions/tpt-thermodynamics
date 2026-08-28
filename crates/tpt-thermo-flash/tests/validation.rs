@@ -1,8 +1,8 @@
 //! Validation tests for the flash solvers against the cubic EoS + seed dataset.
 
 use tpt_thermo_core::component::ComponentDatabase;
-use tpt_thermo_core::EquationOfState;
 use tpt_thermo_core::quantities::{Pressure, Temperature};
+use tpt_thermo_core::EquationOfState;
 use tpt_thermo_data::SeedComponentDatabase;
 use tpt_thermo_eos_cubic::PengRobinson;
 use tpt_thermo_flash::{flash_pt, FlashCalculator};
@@ -71,11 +71,13 @@ fn ph_flash_matches_target_enthalpy() {
     let p = Pressure::new::<pascal>(2.0e6);
     let pt = calc.flash_pt(t0, p, &z).unwrap();
     let h: f64 = (1.0 - pt.vapor_fraction)
-        * eos.molar_enthalpy(t0, pt.liquid_volume, &pt.liquid_composition)
+        * eos
+            .molar_enthalpy(t0, pt.liquid_volume, &pt.liquid_composition)
             .unwrap()
             .value
         + pt.vapor_fraction
-            * eos.molar_enthalpy(t0, pt.vapor_volume, &pt.vapor_composition)
+            * eos
+                .molar_enthalpy(t0, pt.vapor_volume, &pt.vapor_composition)
                 .unwrap()
                 .value;
     let h_target =
@@ -83,14 +85,19 @@ fn ph_flash_matches_target_enthalpy() {
     let ph = calc.flash_ph(h_target, p, &z).unwrap();
     // Recompute enthalpy of the PH result and confirm it matches the target.
     let h2: f64 = (1.0 - ph.vapor_fraction)
-        * eos.molar_enthalpy(t0, ph.liquid_volume, &ph.liquid_composition)
+        * eos
+            .molar_enthalpy(t0, ph.liquid_volume, &ph.liquid_composition)
             .unwrap()
             .value
         + ph.vapor_fraction
-            * eos.molar_enthalpy(t0, ph.vapor_volume, &ph.vapor_composition)
+            * eos
+                .molar_enthalpy(t0, ph.vapor_volume, &ph.vapor_composition)
                 .unwrap()
                 .value;
-    assert!((h2 - h).abs() / h.abs() < 1e-3, "PH flash enthalpy should match target");
+    assert!(
+        (h2 - h).abs() / h.abs() < 1e-3,
+        "PH flash enthalpy should match target"
+    );
 }
 
 #[test]
@@ -119,4 +126,3 @@ fn lle_isoactivity_splits_nonideal_binary() {
     }
     assert!(max_diff > 1e-3, "LLE should produce two distinct phases");
 }
-

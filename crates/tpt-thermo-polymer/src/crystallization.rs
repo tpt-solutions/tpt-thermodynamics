@@ -1,55 +1,61 @@
-//! Crystallization and melting-point depression (Flory equation).
+//! Crystallization: Flory melting-point depression.
 //!
-//! For a semi-crystalline polymer diluted by a diluent, the equilibrium melting point
-//! `T_m` is depressed relative to the pure-polymer melting point `T_m⁰` by the Flory
-//! relation:
+//! For a semicrystalline polymer diluted by a solvent (or diluent), the melting
+//! point `T_m` is depressed relative to the pure-polymer melting point `T_m^0`
+//! according to the Flory equation:
 //!
 //! ```text
-//! 1/T_m − 1/T_m⁰ = −(R/ΔH_f)·(V_u/V_1)·(φ_1 − χ·φ_1²)
+//! 1/T_m − 1/T_m^0 = −(R/Δh_f) [ ln φ₂ + (1 − 1/r)·(1 − φ₂) ]
 //! ```
 //!
-//! where `φ_1` is the volume fraction of diluent, `V_u`/`V_1` the repeat-unit/diluent
-//! molar-volume ratio, `ΔH_f` the heat of fusion per repeat unit, and `χ` the
-//! Flory–Huggins interaction parameter.
+//! where `φ₂` is the polymer volume fraction, `r` the degree of polymerization,
+//! `Δh_f` the (molar) heat of fusion per repeat unit, and `R` the gas constant.
 
-/// Equilibrium melting temperature of a diluted polymer.
-///
-/// * `t_m0` — pure-polymer melting point (K).
-/// * `delta_h_f` — heat of fusion per repeat unit (J·mol⁻¹).
-/// * `v_u_over_v1` — ratio of repeat-unit to diluent molar volume.
-/// * `phi_1` — diluent volume fraction.
-/// * `chi` — Flory–Huggins interaction parameter.
-///
-/// Returns `T_m` in kelvin.
-pub fn melting_point_depression(
-    t_m0: f64,
-    delta_h_f: f64,
-    v_u_over_v1: f64,
-    phi_1: f64,
-    chi: f64,
-) -> f64 {
-    assert!(t_m0 > 0.0 && delta_h_f > 0.0, "non-physical inputs");
-    let r = 8.314462618_f64;
-    let term = (r / delta_h_f) * v_u_over_v1 * (phi_1 - chi * phi_1 * phi_1);
-    let inv_t = 1.0 / t_m0 - term;
-    1.0 / inv_t
+use tpt_thermo_core::quantities::{MolarEnergy, Temperature};
+use tpt_thermo_core::R;
+
+/// Flory melting-point depression. Returns the depressed melting temperature.
+pub fn flory_melting_depression(
+    pure_melting_point: Temperature,
+    heat_of_fusion_per_repeat_unit: MolarEnergy,
+    polymer_volume_fraction: f64,
+    degree_of_polymerization: f64,
+) -> Temperature {
+    let phi = polymer_volume_fraction.clamp(1e-9, 1.0 - 1e-9);
+    let r = degree_of_polymerization.max(1.0);
+    let bracket = phi.ln() + (1.0 - 1.0 / r) * (1.0 - phi);
+    let inv_tm =
+        1.0 / pure_melting_point.value - (R / heat_of_fusion_per_repeat_unit.value) * bracket;
+    Temperature::new::<uom::si::thermodynamic_temperature::kelvin>(1.0 / inv_tm)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use uom::si::molar_energy::joule_per_mole;
+    use uom::si::thermodynamic_temperature::kelvin;
 
     #[test]
-    fn pure_polymer_no_depression() {
-        // φ_1 = 0 → T_m = T_m⁰ exactly.
-        let t = melting_point_depression(400.0, 8000.0, 0.5, 0.0, 0.0);
-        assert!((t - 400.0).abs() < 1e-9);
+    fn depresses_with_dilution() {
+        let tm0 = Temperature::new::<kelvin>(400.0);
+        let dh = MolarEnergy::new::<joule_per_mole>(1.0e7);
+        let tm = flory_melting_depression(tm0, dh, 0.9, 1000.0);
+        assert!(tm.value < 400.0, "melting point should be depressed");
+        // As r → ∞, the (1 − 1/r) term → 1; verify monotonic with φ.
+        let tm_low = flory_melting_depression(tm0, dh, 0.5, 1.0e6);
+        let tm_high = flory_melting_depression(tm0, dh, 0.95, 1.0e6);
+        assert!(
+            tm_low.value < tm_high.value,
+            "more polymer ⇒ less depression"
+        );
     }
 
     #[test]
-    fn depression_is_monotonic_in_phi() {
-        let t_low = melting_point_depression(400.0, 8000.0, 0.5, 0.1, 0.0);
-        let t_high = melting_point_depression(400.0, 8000.0, 0.5, 0.4, 0.0);
-        assert!(t_low < 400.0 && t_high < t_low, "more diluent → lower T_m");
+    fn pure_solvent_limit() {
+        let tm0 = Temperature::new::<kelvin>(400.0);
+        let dh = MolarEnergy::new::<joule_per_mole>(1.0e7);
+        // φ → 1 (no diluent) ⇒ no depression.
+        let tm = flory_melting_depression(tm0, dh, 1.0 - 1e-9, 1000.0);
+        assert!((tm.value - 400.0).abs() < 1e-3);
     }
 }

@@ -1,25 +1,29 @@
 //! `tpt-thermo-polymer` — polymer thermodynamics for `tpt-thermodynamics`.
 //!
-//! Covers the models a process/材料 stack needs for polymer systems:
+//! Phase 12 of the build-out. This crate collects the polymer-relevant models and
+//! provides them through the same workspace interfaces used everywhere else:
 //!
-//! * [`flory_huggins`] — Flory–Huggins activity model (combinatorial entropy plus a
-//!   `χ` interaction term), binary and multicomponent.
-//! * [`mwd`] — molecular-weight distributions (Schulz–Zimm, most-probable) and their
-//!   number/weight/moment averages.
+//! * [`FloryHuggins`] — the classic Flory-Huggins combinatorial + `χ` activity
+//!   model, implementing [`tpt_thermo_core::mixing::ExcessGibbsModel`].
+//! * [`SanchezLacombe`] — the Sanchez-Lacombe lattice-fluid equation of state,
+//!   implementing [`tpt_thermo_core::EquationOfState`].
+//! * [`pc_saft_polymer::PolymerPcSaft`] — a thin specialization of Phase 6's
+//!   PC-SAFT for polymer chains (large segment count `m`), re-using the existing
+//!   [`tpt_thermo_eos_saft::PcSaft`] engine.
+//! * [`cloud_point`] — UCST/LCST cloud-point (binodal/spinodal) computation for
+//!   binary polymer solutions.
+//! * [`mwd`] — molecular-weight distributions (Schulz-Zimm, most-probable) and
+//!   their moments.
+//! * [`parameter_estimation`] — fitting `χ` from osmotic-pressure / activity data.
 //! * [`crystallization`] — Flory melting-point depression.
-//! * [`sanchez_lacombe`] — Sanchez–Lacombe lattice-fluid equation of state
-//!   ([`tpt_thermo_core::EquationOfState`] implementation).
-//! * [`pc_saft_polymer`] — a thin PC-SAFT-for-polymers specialisation reusing
-//!   [`tpt_thermo_eos_saft::PcSaft`], regression-tested to reduce to plain PC-SAFT.
-//! * [`cloud_point`] — L–L phase-split (cloud-point) detection via the
-//!   [`tpt_thermo_phase`] tangent-plane-distance machinery.
-//! * [`parameter_estimation`] — estimate a Flory–Huggins `χ` from a single LLE
-//!   tie-line.
 //!
-//! Quantitative validation against full literature datasets (UCST/LCST cloud points,
-//! polymer-solvent VLE/LLE, osmotic-pressure `χ`) is tracked as Deferred Scope
-//! (consistent with the rest of this build-out); the implementations below are
-//! internally consistent and checked against analytical limiting cases.
+//! All models are `no_std`/`alloc` and unit-safe (uom-backed).
+
+#![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::many_single_char_names)]
+
+extern crate alloc;
 
 pub mod cloud_point;
 pub mod crystallization;
@@ -28,3 +32,11 @@ pub mod mwd;
 pub mod parameter_estimation;
 pub mod pc_saft_polymer;
 pub mod sanchez_lacombe;
+
+pub use cloud_point::{binodal, critical_point, ChiTemperature, CloudPointKind, CloudPointResult};
+pub use crystallization::flory_melting_depression;
+pub use flory_huggins::FloryHuggins;
+pub use mwd::{most_probable, schulz_zimm, MolecularWeightDistribution};
+pub use parameter_estimation::chi_from_osmotic_pressure;
+pub use pc_saft_polymer::PolymerPcSaft;
+pub use sanchez_lacombe::SanchezLacombe;

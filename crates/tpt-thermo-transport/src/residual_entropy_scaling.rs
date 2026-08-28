@@ -13,12 +13,7 @@ use uom::si::molar_mass::kilogram_per_mole;
 /// Dimensionless Rosenfeld scaling factor `Φ = η·ρ^(2/3) / √(m·T)` from an
 /// (ideal-gas) molar density `rho` (mol·m⁻³), viscosity `η`, mean molar mass `m`
 /// (kg·mol⁻¹) and temperature `T` (K).
-pub fn scaling_factor(
-    eta: DynamicViscosity,
-    rho: f64,
-    m: MolarMass,
-    t: Temperature,
-) -> f64 {
+pub fn scaling_factor(eta: DynamicViscosity, rho: f64, m: MolarMass, t: Temperature) -> f64 {
     let rho_si = rho * 1000.0; // mol/m³ -> mol/m³ (molar mass already kg/mol)
     let _ = kilogram_per_mole;
     let denom = (m.value * t.value).sqrt();
@@ -39,12 +34,7 @@ pub fn entropy_collapse(a: f64, b: f64, s1: f64, s2: f64) -> f64 {
 /// (e.g. critical) pressure, using a simple corresponding-states relation
 /// `s^R ≈ −(P/P_ref)·(T_c/T)^(1/3)`. Largely a placeholder for the full
 /// isomorph-based collapse; documented as approximate.
-pub fn residual_entropy_approx(
-    p: Pressure,
-    t: Temperature,
-    t_ref: f64,
-    p_ref: f64,
-) -> f64 {
+pub fn residual_entropy_approx(p: Pressure, t: Temperature, t_ref: f64, p_ref: f64) -> f64 {
     let pr = p.value / p_ref.max(1e-6);
     -(pr) * (t_ref / t.value.max(1e-6)).powf(1.0 / 3.0)
 }
