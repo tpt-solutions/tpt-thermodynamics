@@ -12,6 +12,8 @@
 //!   [`tpt_thermo_core::mixing::ExcessGibbsModel`] (e.g. the NRTL/Wilson/UNIQUAC
 //!   models in `tpt-thermo-eos-activity`).
 //! * [`batch::flash_pt_batch`] — a per-composition loop over a feed table.
+//! * [`batch::flash_pt_batch_parallel`] — a `std`-feature, cross-thread variant of
+//!   the batch (the practical realisation of the deferred explicit-SIMD batch).
 //!
 //! K-values are built from the equilibrium fugacity equality `K_i = φ_i^L/φ_i^V`,
 //! where each phase's molar volume is recovered by root-solving the EoS pressure
@@ -57,6 +59,9 @@ pub mod rachford_rice;
 pub mod variants;
 
 pub use acceleration::AccelerationMemory;
+pub use batch::flash_pt_batch;
+#[cfg(feature = "std")]
+pub use batch::flash_pt_batch_parallel;
 pub use error::FlashError;
 pub use initialization::wilson_k_values;
 pub use lle::{lle_isoactivity, LleResult};

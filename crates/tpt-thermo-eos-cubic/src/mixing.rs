@@ -16,6 +16,7 @@
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
+use tpt_thermo_core::component::ComponentDatabase;
 use tpt_thermo_core::mixing::ExcessGibbsModel;
 use tpt_thermo_core::quantities::{Pressure, Temperature};
 use uom::si::pressure::pascal;
@@ -63,6 +64,22 @@ impl VdwMixing {
     pub fn with_tdependent(mut self, td: Vec<Vec<(f64, f64, f64)>>) -> Self {
         self.td = Some(td);
         self
+    }
+
+    /// Build a `VdwMixing` from a [`ComponentDatabase`]'s binary interaction
+    /// parameters (opt-in consumption of seeded/fitted `k_ij` values). Pairs the
+    /// database does not define default to `0.0`.
+    pub fn from_database(db: &dyn ComponentDatabase) -> Self {
+        let n = db.num_components();
+        let mut kij = vec![vec![0.0; n]; n];
+        for i in 0..n {
+            for j in 0..n {
+                if i != j {
+                    kij[i][j] = db.binary_interaction(i, j).unwrap_or(0.0);
+                }
+            }
+        }
+        Self { kij, td: None }
     }
 
     fn kij(&self, i: usize, j: usize, t: f64) -> f64 {

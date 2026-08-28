@@ -125,6 +125,14 @@ impl CubicEos {
         self.pure.len()
     }
 
+    /// Per-component critical parameters `(T_c [K], P_c [Pa], ω)` for the pure
+    /// `i`-th species, used to seed initial guesses (e.g. Wilson K-values in the
+    /// parameter-estimation incipient-phase solver). Returns `None` if `i` is out
+    /// of range.
+    pub fn component_critical(&self, i: usize) -> Option<(f64, f64, f64)> {
+        self.pure.get(i).map(|p| (p.tc, p.pc, p.omega))
+    }
+
     fn c_mix(&self, z: &[f64]) -> f64 {
         self.volume_translation
             .iter()

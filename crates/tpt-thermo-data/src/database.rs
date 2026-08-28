@@ -1,7 +1,10 @@
 //! A [`ComponentDatabase`](tpt_thermo_core::component::ComponentDatabase)
 //! implementation backed by an in-memory, serde-loaded component set.
 
-use crate::{bip::BipTable, record::ComponentRecord};
+use crate::{
+    bip::{BinaryInteractionRecord, BipTable},
+    record::ComponentRecord,
+};
 use serde::{Deserialize, Serialize};
 use tpt_thermo_core::component::ComponentDatabase;
 use tpt_thermo_core::error::ThermoError;
@@ -13,6 +16,8 @@ use uom::si::{molar_mass::kilogram_per_mole, pressure::pascal, thermodynamic_tem
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct RawDb {
     components: Vec<ComponentRecord>,
+    #[serde(default)]
+    binary_interactions: Option<Vec<BinaryInteractionRecord>>,
 }
 
 /// An in-memory component database, optionally carrying a [`BipTable`].
@@ -37,10 +42,13 @@ impl SeedComponentDatabase {
     pub fn from_toml_str(s: &str) -> Result<Self, String> {
         let raw: RawDb = toml::from_str(s).map_err(|e| e.to_string())?;
         let records = raw.components;
-        let db = Self {
-            records,
-            bip: BipTable::default(),
+        let bip = match &raw.binary_interactions {
+            Some(bis) => BipTable::from_name_records(bis, |name| {
+                records.iter().position(|r| r.name == name)
+            })?,
+            None => BipTable::default(),
         };
+        let db = Self { records, bip };
         let issues = db.validate();
         if !issues.is_empty() {
             return Err(issues.join("; "));
@@ -52,6 +60,7 @@ impl SeedComponentDatabase {
     pub fn to_toml(&self) -> Result<String, String> {
         let raw = RawDb {
             components: self.records.clone(),
+            binary_interactions: None,
         };
         toml::to_string(&raw).map_err(|e| e.to_string())
     }
@@ -59,6 +68,8 @@ impl SeedComponentDatabase {
     /// Parse a database from a JSON document.
     pub fn from_json_str(s: &str) -> Result<Self, String> {
         let records: Vec<ComponentRecord> = serde_json::from_str(s).map_err(|e| e.to_string())?;
+        // JSON documents carry only the component list (binary interactions are
+        // part of the curated TOML seed); default to zero everywhere.
         let db = Self {
             records,
             bip: BipTable::default(),
@@ -84,6 +95,42 @@ impl SeedComponentDatabase {
     pub fn with_bip(mut self, bip: BipTable) -> Self {
         self.bip = bip;
         self
+    }
+
+    /// A shared reference to the binary interaction parameter table.
+    pub fn bip_table(&self) -> &BipTable {
+        &self.bip
+    }
+
+    /// Build a new database containing only the components at `indices` (in the
+    /// given order), reindexing any binary interaction parameters accordingly.
+    /// Useful for regression studies (e.g. fitting a binary interaction
+    /// parameter to a two-component VLE dataset).
+    pub fn subset(&self, indices: &[usize]) -> Result<Self, ThermoError> {
+        let mut records = Vec::with_capacity(indices.len());
+        for &i in indices {
+            let r = self.records.get(i).ok_or(ThermoError::IndexOutOfRange(i))?;
+            records.push(r.clone());
+        }
+        let mut bip = BipTable::default();
+        for (key, &val) in &self.bip.entries {
+            let mut parts = key.split('_');
+            let a: usize = parts
+                .next()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(usize::MAX);
+            let b: usize = parts
+                .next()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(usize::MAX);
+            if let (Some(pa), Some(pb)) = (
+                indices.iter().position(|&x| x == a),
+                indices.iter().position(|&x| x == b),
+            ) {
+                bip.set(pa, pb, val);
+            }
+        }
+        Ok(Self { records, bip })
     }
 
     /// Validate every record and the dataset as a whole (e.g. unique names).

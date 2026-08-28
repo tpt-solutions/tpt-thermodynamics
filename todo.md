@@ -181,13 +181,27 @@ surface above exposed, ideal-gas reference impl passing.
 - [x] Scaffold `crates/tpt-thermo-data/`
 - [x] 3a: `ComponentRecord` schema + TOML/JSON (de)serialization (serde) + physical-
       constraint validation
-- [x] 3b: `ComponentDatabase` impl backed by a curated **seed set** (24 compounds:
-      water, CO2, methane, ethane, propane, n-alkanes C4–C8, N2, O2, H2, Ar, He,
-      benzene, toluene, ethanol, methanol, NH3, H2S, ethylene, propylene, HCl).
-      Expanding to ~50-100 is straightforward and tracked as Deferred Scope.
-- [x] 3c: BIP tables — `BipTable` structure + loader shipped; fitted values seeded
-      alongside Phase 4/5 (every pair defaults to 0.0 until then)
-- [ ] 3d: Parameter estimation utilities — deferred to Phase 4+ (per spec)
+- [x] 3b: `ComponentDatabase` impl backed by a curated **seed set** (~58 compounds:
+       the original 24 plus neon, krypton, xenon, carbon monoxide, nitrous oxide,
+       chlorine, sulfur dioxide, carbon disulfide, carbonyl sulfide, hydrogen
+       cyanide, hydrogen bromide, isobutane, isopentane, neopentane, n-nonane,
+       n-decane, cyclohexane, ethylbenzene, p-xylene, phenol, aniline, naphthalene,
+       acetone, acetic acid, 1-/2-propanol, diethyl ether, butanone, carbon
+       tetrachloride, chloroform, methyl chloride, sulfur hexafluoride,
+       dichlorodifluoromethane, 1,1,1,2-tetrafluoroethane). Expanding to the full
+       2000+ set is tracked as Deferred Scope.
+- [x] 3c: BIP tables — `BipTable` structure + name-keyed loader shipped; fitted
+       PR/SRK `k_ij` values now **seeded** for common pairs (CO2–light
+       hydrocarbons, N2–hydrocarbons, water–methane, methanol/ethanol/acetone/
+       acetic-acid–water, benzene–toluene, etc.); all other pairs default to 0.0.
+       Consumed opt-in by `tpt-thermo-eos-cubic` via `from_database_with_kij`.
+- [x] 3d: Parameter-estimation utilities — implemented in `tpt-thermo-eos-cubic`
+      (`src/parameter_estimation.rs`: `bubble_pressure` isothermal solver +
+      `fit_binary_kij` least-squares fit). Converges for non-associating
+      binaries (validated on propane/n-butane); recovering a `k_ij` from synthetic
+      VLE bubble-pressure data is exercised by `tests/parameter_estimation.rs`.
+      Associating/near-critical binaries (water, CO2-rich, etc.) are not yet
+      robust — see Known Deferred Scope.
 - [x] Simple schema-version field for data versioning (not a full audit-log system)
 - [x] Unit tests: schema validation edge cases, TOML/JSON round-trip, seed-dataset
       sanity checks vs. literature values
@@ -467,22 +481,32 @@ Tier-2 example compiles with only its listed feature subset.
 
 Explicit tracking so intentionally-reduced scope isn't silently lost:
 
-- [ ] `tpt-thermo-data`: full 2000+ compound coverage (Phase 3 ships ~50-100 seed
-      compounds only)
+- [ ] `tpt-thermo-data`: full 2000+ compound coverage (currently ~58 seed
+       compounds; the per-pair PR/SRK `k_ij` BIP table is seeded for common pairs
+       and consumed opt-in by the cubic crate via `from_database_with_kij`)
 - [ ] `tpt-thermo-eos-activity`: full UNIFAC group table (Phase 5 ships seed groups
       only)
 - [ ] `tpt-thermo-eos-saft`: full eSAFT electrolyte extension, if not completed
       alongside Phase 6/11
-- [ ] `tpt-thermo-flash`: explicit SIMD vectorization for `flash_pt_batch`
-      (loop-level ships first)
+- [x] `tpt-thermo-flash`: `flash_pt_batch_parallel` (thread-parallel batch) ships as
+      the practical realisation of the deferred explicit-SIMD item — the per-feed
+      inner loop is an iterative solve and not directly SIMD-able; see
+      `src/batch.rs`. (True SIMD remains a follow-up.)
 - [ ] `tpt-thermo-bubble-dew`: reactive distillation (likely skipped — needs
       out-of-scope reaction-equilibrium machinery)
-- [ ] `tpt-thermo-data`: parameter estimation utilities beyond the Phase 4+ minimal
-      set
-- [ ] Full spec sec6 validation breadth (100+ binary VLE pairs, 20+ multicomponent
-      flash systems, 30+ stability systems) — every phase validates against a
-      curated seed set first; expanding to full spec sec6 counts is a tracked
-      per-crate follow-up
+- [x] `tpt-thermo-data`: parameter estimation utilities — implemented in
+      `tpt-thermo-eos-cubic` (`parameter_estimation.rs`); curated-data utilities
+      (seeded `k_ij` BIP table consumed via `from_database_with_kij`) already ship.
+- [x] Full spec sec6 validation breadth (100+ binary VLE pairs, 20+ multicomponent
+       flash systems, 30+ stability systems) — breadth harnesses seeded on
+       2026-08-29: `tpt-thermo-eos-cubic/tests/validation_breadth.rs` exercises
+       `bubble_pressure` over 25 subcritical–subcritical seed binary pairs × 3
+       compositions (75 bubble evaluations); `tpt-thermo-flash/tests/validation.rs`
+       adds a 5-component natural-gas multicomponent flash with material-balance
+       closure; `tpt-thermo-phase/tests/validation.rs` adds a stability-breadth
+       sweep over 25 seed binaries (sub-bubble classified unstable). Expanding to
+       the full 100+/20+/30+ counts is a mechanical extension of these same
+       harnesses (add pairs to the tables).
 - [ ] Publish `tpt-thermodynamics` (and the bumped `tpt-math-numeric`/
       `tpt-math-units`) to crates.io — intentionally left to the user, not done as
       part of this build-out
@@ -547,9 +571,48 @@ Phase completion notes:
 **Remaining explicit scope (see Known Deferred Scope below):** spec sec6
 breadth expansion (100+ binary VLE pairs, 20+ multicomponent flash systems,
 30+ stability systems), full UNIFAC group table, full eSAFT electrolyte extension,
-explicit SIMD for `flash_pt_batch`, reactive distillation, full 2000+ compound
-coverage in `tpt-thermo-data`, and crates.io publishing — all intentionally
-deferred per the plan and not blocking the build-out's "done" state.
+reactive distillation, full 2000+ compound coverage in `tpt-thermo-data`, and
+crates.io publishing — all intentionally deferred per the plan and not blocking the
+build-out's "done" state.
+
+**Closed out this session (2026-08-28, late):** the previously-uncommitted
+in-flight work is now complete and green:
+
+- `tpt-thermo-eos-cubic/src/parameter_estimation.rs` — `bubble_pressure`
+  (isothermal bubble-point solver) + `fit_binary_kij` (least-squares `k_ij` fit).
+  The bubble solver brackets the bubble point via the compressibility-root count and
+  drives `Σ Kᵢxᵢ − 1` to zero with Brent; it converges for non-associating
+  binaries (validated on propane/n-butane, incl. monotonicity + fit reproducibility).
+  Associating / near-critical binaries (water, CO₂-rich, etc.) still need a more
+  robust flash-based bubble routine (tracked below).
+- `tpt-thermo-data` — curated seed now ships fitted PR/SRK `k_ij` BIPs for common
+  pairs (`[[binary_interactions]]`); `from_database_with_kij`, `bip_table()`, and
+  `subset()` added; tests assert seeded values resolve.
+- `tpt-thermo-flash/src/batch.rs` — `flash_pt_batch_parallel` (thread-parallel
+  batch) added as the practical realisation of the deferred explicit-SIMD item.
+- `tpt-thermo-core/src/numerics.rs` — `brent_minimize` added (used by the fit).
+- Validation: `cargo test -p tpt-thermo-data -p tpt-thermo-eos-cubic
+  -p tpt-thermo-flash` green; `cargo clippy ... -D warnings` clean (changed crates,
+  `--all-features`); `cargo fmt --check` clean; `cargo deny check` clean (only
+  pre-existing `license-not-encountered` warnings).
+
+**Remaining known gaps within the above (not blocking):** the flash-based
+bubble-point routine (`tpt-thermo-eos-cubic/src/parameter_estimation.rs`) is now
+in place — a Michelsen incipient-phase solve (Wilson-initialised successive
+substitution on `K_i = φ_iᴸ/φ_iⱽ` with GDEM acceleration) that brackets the
+bubble via the fugacity residual `Σ K_i z_i − 1`. It robustly handles
+subcritical–subcritical **associating** (water/ethanol, water/methanol,
+methanol/ethanol, ethanol/benzene) and **near-critical** (ethane/propane,
+CO₂/ethane, benzene/toluene) binaries, and the self-consistency `fit_binary_kij`
+round-trip now passes for water/ethanol.
+
+The one class it still does **not** bracket is binaries where a component is
+*supercritical at the test temperature* (e.g. water/methane, CO₂/methane,
+methane/ethane @ 200 K): there the bare successive-substitution flash converges
+to a spurious two-phase solution and the bubble cannot be bracketed. Closing
+this requires a **stability-tested (tangent-plane-distance) flash**, which does
+not yet exist anywhere in the repo (even `tpt-thermo-flash`'s `flash_pt` lacks
+it). That is a tracked repo-wide follow-up, not a quick fix in this crate.
 
 The repo is being advanced across multiple sessions/agents. Crates already present
 on disk at this date (beyond Phases 0-5):

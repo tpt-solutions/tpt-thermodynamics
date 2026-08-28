@@ -103,7 +103,11 @@ pub fn cubic_real_roots(a: f64, b: f64, c: f64, d: f64) -> alloc::vec::Vec<f64> 
             roots.push(2.0 * r * theta.cos() + shift);
         }
     }
-    roots.sort_by(|x, y| x.partial_cmp(y).unwrap());
+    // Drop any non-finite (NaN/inf) roots so downstream callers get a clean
+    // empty list (rather than a panic from `partial_cmp` on NaN) when the cubic
+    // coefficients are degenerate for a given (T, P, z).
+    roots.retain(|r| r.is_finite());
+    roots.sort_by(|x, y| x.partial_cmp(y).unwrap_or(core::cmp::Ordering::Equal));
     roots
 }
 

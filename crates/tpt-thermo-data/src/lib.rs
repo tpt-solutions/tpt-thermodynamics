@@ -8,8 +8,10 @@
 //!   ([`tpt_thermo_core::component::ComponentDatabase`]) implementation loaded
 //!   from the embedded curated seed set (`data/seed.toml`, ~24 well-known
 //!   compounds) or any user-supplied TOML/JSON.
-//! * [`bip::BipTable`] — binary-interaction-parameter storage (defaults to
-//!   `0.0`; fitted values are seeded alongside Phases 4/5).
+//! * [`bip::BipTable`] — binary-interaction-parameter storage. The curated seed
+//!   now ships fitted PR/SRK `k_ij` values for common pairs
+//!   (`[[binary_interactions]]` in `data/seed.toml`); every other pair defaults
+//!   to `0.0`. These are consumed opt-in by the cubic crate.
 //!
 //! Parameter estimation utilities (spec 3d) are deferred to Phase 4+.
 
@@ -18,7 +20,7 @@ pub mod database;
 pub mod record;
 pub mod seed;
 
-pub use bip::BipTable;
+pub use bip::{BinaryInteractionRecord, BipTable};
 pub use database::SeedComponentDatabase;
 pub use record::ComponentRecord;
 
@@ -52,9 +54,25 @@ mod tests {
         let db = SeedComponentDatabase::from_seed();
         let i = db.index_of("methane").unwrap();
         assert_eq!(db.name(i).unwrap(), "methane");
-        // Default k_ij is 0; diagonal is always 0.
+        // Diagonal k_ij is always 0.
         assert_eq!(db.binary_interaction(i, i).unwrap(), 0.0);
-        assert_eq!(db.binary_interaction(0, 1).unwrap(), 0.0);
+        // An unseeded pair defaults to 0.
+        let neopentane = db.index_of("neopentane").unwrap();
+        assert_eq!(db.binary_interaction(i, neopentane).unwrap(), 0.0);
+    }
+
+    #[test]
+    fn seeded_binary_interactions_resolve() {
+        let db = SeedComponentDatabase::from_seed();
+        let co2 = db.index_of("carbon dioxide").unwrap();
+        let methane = db.index_of("methane").unwrap();
+        // Seeded PR k_ij for CO2-methane per Poling et al. 2001.
+        assert!((db.binary_interaction(co2, methane).unwrap() - 0.10).abs() < 1e-9);
+        // Symmetric.
+        assert!((db.binary_interaction(methane, co2).unwrap() - 0.10).abs() < 1e-9);
+        // Water-methane is a strongly non-ideal pair.
+        let water = db.index_of("water").unwrap();
+        assert!((db.binary_interaction(water, methane).unwrap() - 0.49).abs() < 1e-9);
     }
 
     #[test]

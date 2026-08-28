@@ -163,6 +163,116 @@ where
     Err(ConvergenceStatus::Diverged(DivergenceReason::MaxIterations))
 }
 
+/// Brent's method for **minimisation** (golden-section search safeguarded by
+/// inverse-parabolic interpolation; Brent 1973). Finds the minimum of a
+/// unimodal `f` on the bracket `[a, b]`, returning `(x_min, f_min)`.
+///
+/// This is the companion to [`brent`] (root finding) and underpins the
+/// parameter-estimation utilities (e.g. fitting a binary interaction
+/// parameter to VLE data).
+pub fn brent_minimize<F, Func>(mut f: Func, ax: F, bx: F, tol: F, max_iter: usize) -> (F, F)
+where
+    F: Scalar,
+    Func: FnMut(F) -> F,
+{
+    let zero = F::zero();
+    let two = F::one() + F::one();
+    let half = F::from(0.5).unwrap_or(F::one());
+    let gold = F::from(0.3819660112501051).unwrap_or(half);
+    let tiny = F::from(1e-20).unwrap_or(F::zero());
+
+    let mut a = if ax < bx { ax } else { bx };
+    let mut b = if ax < bx { bx } else { ax };
+    let mut v = a + gold * (b - a);
+    let mut w = v;
+    let mut x = v;
+    let mut fx = f(x);
+    let mut fv = fx;
+    let mut fw = fx;
+    let mut d = b - a;
+    let mut e = d;
+
+    for _ in 0..max_iter {
+        let xm = half * (a + b);
+        let tol1 = tol * x.abs() + tiny;
+        let tol2 = two * tol1;
+        if (x - xm).abs() <= tol2 - half * (b - a) {
+            return (x, fx);
+        }
+        let (mut u, fu);
+        if e.abs() > tol1 {
+            // Inverse-parabolic interpolation through (v, fv), (w, fw), (x, fx).
+            let r = (x - w) * (fx - fv);
+            let q = (x - v) * (fx - fw);
+            let mut p = (x - v) * q - (x - w) * r;
+            let mut qq = two * (q - r);
+            if qq > zero {
+                p = -p;
+            }
+            qq = qq.abs();
+            let etemp = e;
+            e = d;
+            let par_ok = p.abs() < half * qq * etemp.abs() && p > qq * (a - x) && p < qq * (b - x);
+            if par_ok {
+                d = p / qq;
+                u = x + d;
+                if u - a < tol2 || b - u < tol2 {
+                    let du = if xm >= x { tol1 } else { -tol1 };
+                    u = x + du;
+                }
+                fu = f(u);
+            } else {
+                if x >= xm {
+                    e = a - x;
+                } else {
+                    e = b - x;
+                }
+                d = gold * e;
+                u = x + d;
+                fu = f(u);
+            }
+        } else {
+            if x >= xm {
+                e = a - x;
+            } else {
+                e = b - x;
+            }
+            d = gold * e;
+            u = x + d;
+            fu = f(u);
+        }
+        if fu <= fx {
+            if u >= x {
+                a = x;
+            } else {
+                b = x;
+            }
+            v = w;
+            fv = fw;
+            w = x;
+            fw = fx;
+            x = u;
+            fx = fu;
+        } else {
+            if u < x {
+                a = u;
+            } else {
+                b = u;
+            }
+            if w == x || fu <= fw {
+                v = w;
+                fv = fw;
+                w = u;
+                fw = fu;
+            } else if v == x || v == w || fu <= fv {
+                v = u;
+                fv = fu;
+            }
+        }
+    }
+    (x, fx)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -192,6 +302,28 @@ mod tests {
         // f(x) = cos(x) - x, bracket [0, 1].
         let r = brent(|x: f64| x.cos() - x, 0.0, 1.0, 1e-12, 100).unwrap();
         assert!((r.cos() - r).abs() < 1e-9);
+    }
+
+    #[test]
+    fn brent_minimize_finds_quadratic() {
+        // f(x) = (x - 2)^2, minimum at x = 2, f = 0.
+        let (x, fx) = brent_minimize(|x: f64| (x - 2.0).powi(2), 0.0, 5.0, 1e-10, 200);
+        assert!((x - 2.0).abs() < 1e-6, "x = {x}");
+        assert!(fx.abs() < 1e-9);
+    }
+
+    #[test]
+    fn brent_minimize_finds_cosine() {
+        // f(x) = cos(x), minimum at x = π, f = -1.
+        let (x, fx) = brent_minimize(|x: f64| x.cos(), 0.0, 6.0, 1e-10, 200);
+        assert!((x - core::f64::consts::PI).abs() < 1e-5, "x = {x}");
+        assert!((fx + 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn brent_minimize_recovers_shifted_parabola() {
+        let (x, _fx) = brent_minimize(|x: f64| (x + 3.0).powi(2) + 1.0, -10.0, 0.0, 1e-9, 200);
+        assert!((x + 3.0).abs() < 1e-5);
     }
 
     #[test]
