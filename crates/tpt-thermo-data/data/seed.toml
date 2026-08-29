@@ -719,17 +719,6 @@ source = "NIST / Poling et al. 2001"
 
 [[components]]
 schema_version = 1
-name = "butane"
-formula = "C4H10"
-critical_temperature_k = 290
-critical_pressure_pa = 2524533.5
-acentric_factor = 0.1380
-molar_mass_kg_per_mol = 0.0700000
-normal_boiling_point_k = 151
-source = "estimated"
-
-[[components]]
-schema_version = 1
 name = "pentane"
 formula = "C5H12"
 critical_temperature_k = 315
