@@ -142,6 +142,18 @@ impl<'a, E: EquationOfState + ?Sized> FlashCalculator<'a, E> {
         flash_pt_impl(self.eos, self.db, self.nc, t, p, z, PT_MAX_ITER, PT_TOL)
     }
 
+    /// PT flash guarded by a tangent-plane-distance stability test, which rejects
+    /// spurious two-phase splits for single-phase feeds (e.g. supercritical
+    /// components). See [`crate::stability::flash_pt_with_stability`].
+    pub fn flash_pt_with_stability(
+        &self,
+        t: Temperature,
+        p: Pressure,
+        z: &[f64],
+    ) -> Result<FlashResult, FlashError> {
+        crate::stability::flash_pt_with_stability(self.eos, self.db, t, p, z)
+    }
+
     /// PH flash: specified molar enthalpy `h`, pressure `P`.
     pub fn flash_ph(
         &self,
@@ -203,7 +215,8 @@ fn relative_change(a: &[f64], b: &[f64]) -> f64 {
 }
 
 /// Core PT flash implementation, shared by [`FlashCalculator::flash_pt`] and the
-/// convenience free function.
+/// convenience free function. Seeds K-values from the Wilson correlation (when a
+/// component database is supplied) or unity.
 #[allow(clippy::too_many_arguments)]
 pub fn flash_pt_impl<E: EquationOfState + ?Sized>(
     eos: &E,
@@ -215,6 +228,29 @@ pub fn flash_pt_impl<E: EquationOfState + ?Sized>(
     max_iter: usize,
     tol: f64,
 ) -> Result<FlashResult, FlashError> {
+    let k0 = match db {
+        Some(d) => wilson_k_values(t.value, p, d, z)
+            .map_err(|_| FlashError::NotConverged(ConvergenceStatus::NotConverged))?,
+        None => alloc::vec![1.0_f64; nc],
+    };
+    flash_pt_impl_with_k(eos, db, nc, t, p, z, k0, max_iter, tol)
+}
+
+/// Like [`flash_pt_impl`] but with an explicit initial K-value vector, enabling a
+/// caller (e.g. a stability-tested driver) to seed the iteration from a
+/// tangent-plane-distance trial composition.
+#[allow(clippy::too_many_arguments)]
+pub fn flash_pt_impl_with_k<E: EquationOfState + ?Sized>(
+    eos: &E,
+    _db: Option<&dyn ComponentDatabase>,
+    nc: usize,
+    t: Temperature,
+    p: Pressure,
+    z: &[f64],
+    k0: Vec<f64>,
+    max_iter: usize,
+    tol: f64,
+) -> Result<FlashResult, FlashError> {
     if z.len() != nc || z.is_empty() {
         return Err(FlashError::InvalidFeed);
     }
@@ -223,11 +259,10 @@ pub fn flash_pt_impl<E: EquationOfState + ?Sized>(
         return Err(FlashError::InvalidFeed);
     }
 
-    let mut k = match db {
-        Some(d) => wilson_k_values(t.value, p, d, z)
-            .map_err(|_| FlashError::NotConverged(ConvergenceStatus::NotConverged))?,
-        None => alloc::vec![1.0_f64; nc],
-    };
+    let mut k = k0;
+    if k.len() != nc {
+        return Err(FlashError::InvalidFeed);
+    }
 
     let mut mem = AccelerationMemory::new(nc);
     let mut iterations = 0;
@@ -261,7 +296,7 @@ pub fn flash_pt_impl<E: EquationOfState + ?Sized>(
 }
 
 /// Compute K-values for an arbitrary EoS (mirrors [`FlashCalculator::k_values`]).
-fn eos_k_values<E: EquationOfState + ?Sized>(
+pub(crate) fn eos_k_values<E: EquationOfState + ?Sized>(
     eos: &E,
     t: Temperature,
     p: Pressure,

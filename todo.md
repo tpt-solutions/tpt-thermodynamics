@@ -481,11 +481,21 @@ Tier-2 example compiles with only its listed feature subset.
 
 Explicit tracking so intentionally-reduced scope isn't silently lost:
 
-- [ ] `tpt-thermo-data`: full 2000+ compound coverage (currently ~58 seed
-       compounds; the per-pair PR/SRK `k_ij` BIP table is seeded for common pairs
-       and consumed opt-in by the cubic crate via `from_database_with_kij`)
-- [ ] `tpt-thermo-eos-activity`: full UNIFAC group table (Phase 5 ships seed groups
-      only)
+- [ ] `tpt-thermo-data`: full 2000+ compound coverage (**expanded from ~58 to
+       ~193 seed compounds** across three deferred-task batches; the per-pair
+       PR/SRK `k_ij` BIP table is seeded for common pairs and consumed opt-in by
+       the cubic crate via `from_database_with_kij`)
+- [x] `tpt-thermo-eos-activity`: full UNIFAC group table — **completed** in the
+       2026-08-29 deferred-task session. `seed_group_table` now defines the full
+       Original UNIFAC set: **55 main groups / 119 subgroups** with published
+       R_k/Q_k (Hansen et al. 1991; Wittig et al. 2003) and the DDBST Aij/Aji
+       interaction matrix for the 23-main-group practical core (alkanes,
+       olefins, aromatics, alcohols, water, carbonyls, acids, esters, ethers,
+       amines, nitriles, halogens, sulfur, nitro, thiol, furfural, diols,
+       alkynes, furans, sulfones, epoxides, etc.). Interactions are expanded
+       main-group→subgroup at runtime so all subgroups in a main group share the
+       published parameters. Remaining niche-main-group pairs default to
+       `a_mn = 0` (ideal).
 - [ ] `tpt-thermo-eos-saft`: full eSAFT electrolyte extension, if not completed
       alongside Phase 6/11
 - [x] `tpt-thermo-flash`: `flash_pt_batch_parallel` (thread-parallel batch) ships as
@@ -613,6 +623,78 @@ to a spurious two-phase solution and the bubble cannot be bracketed. Closing
 this requires a **stability-tested (tangent-plane-distance) flash**, which does
 not yet exist anywhere in the repo (even `tpt-thermo-flash`'s `flash_pt` lacks
 it). That is a tracked repo-wide follow-up, not a quick fix in this crate.
+
+**Closed out 2026-08-29:**
+
+- **Item 1 — flash-based bubble-point routine.** `tpt-thermo-eos-cubic/src/
+  parameter_estimation.rs` rewritten as a Michelsen incipient-phase solve:
+  Wilson-initialised successive substitution on `K_i = φ_iᴸ/φ_iⱽ` with GDEM
+  acceleration, bracketing the bubble via `Σ K_i z_i − 1`. Added
+  `CubicEos::component_critical` (exposes per-component `T_c, P_c, ω` for Wilson
+  seeding). The solver now converges for subcritical–subcritical associating and
+  near-critical binaries (water/ethanol, water/methanol, methanol/ethanol,
+  ethanol/benzene, ethane/propane, CO₂/ethane, benzene/toluene, …) and the
+  `fit_binary_kij` self-consistency round-trip passes for water/ethanol. The
+  supercritical-component limitation remains tracked (see above).
+- **Item 2 — spec sec6 validation breadth (seed).** Added breadth harnesses:
+  - `tpt-thermo-eos-cubic/tests/validation_breadth.rs`: `bubble_pressure` over 25
+    subcritical–subcritical seed binary pairs × 3 compositions (75 evaluations),
+    asserting convergence + physical plausibility + composition smoothness.
+  - `tpt-thermo-flash/tests/validation.rs`: `multicomponent_flash_material_balance`
+    — 5-component natural-gas PT flash asserting convergence, phase-fraction range,
+    component-wise material-balance closure, and light-component vapor enrichment.
+  - `tpt-thermo-phase/tests/validation.rs`: `stability_breadth_over_seed_binaries`
+    — tangent-plane stability sweep over 25 seed binaries, asserting sub-bubble
+    compositions are classified unstable.
+- Validation: `cargo test --workspace` green (all crates); `cargo clippy
+  --workspace --all-targets --all-features -- -D warnings` clean; `cargo fmt
+  --check` clean; `cargo deny check` clean (only pre-existing
+   `license-not-encountered` warnings).
+
+**Closed out 2026-08-29 (deferred-task session):**
+
+- **TPD stability-tested `flash_pt` (repo-wide gap).** `tpt-thermo-flash/src/
+  stability.rs` adds a self-contained Michelsen tangent-plane-distance (TPD)
+  stability test — implemented directly in the flash crate because it cannot
+  depend on `tpt-thermo-phase` (phase → flash would be a dependency cycle). The
+  test minimises the TPD over both trial directions (feed-as-vapor → liquid,
+  feed-as-liquid → vapor) via successive substitution and reports the global min.
+  `flash_pt_with_stability(eos, db, T, P, z)` runs it first: a *stable* feed
+  forces a single-phase result even if the bare successive-substitution flash
+  locked onto a spurious split (the supercritical-component gap from the
+  snapshot), and an *unstable* feed that the Wilson-initialised flash collapsed
+  to single phase is recovered by a forced Michelsen K = φᴸ/φⱽ iteration that
+  keeps the phases split (clamped β). Exposed as `FlashCalculator::
+  flash_pt_with_stability` and re-exported from `tpt-thermo-flash` /
+  `tpt-thermo`. Tests: `stable_supercritical_feed_overrides_spurious_two_phase`
+  (methane/ethane @ 250 K, 50 bar: bare flash spurious TwoPhase → overridden to
+  SinglePhase) and `unstable_feed_recovered_from_missed_two_phase` (ethane/propane
+  @ 250 K, 10 bar: bare flash missed → recovered TwoPhase). `cargo test -p
+  tpt-thermo-flash`, `clippy`, `fmt --check` all green.
+
+- **Expanded seed compound coverage (Deferred Scope item).** Added **three batches**
+  of curated compounds to `crates/tpt-thermo-data/data/seed.toml` (olefins,
+  alcohols, esters, aldehydes, amines, nitriles, aromatics, naphthenes,
+  halogenated refrigerants, organosulfur, inorganics, and n-alkanes C11–C20)
+  with NIST/Poling critical constants, pushing the curated set from ~58 to
+  **~193 compounds** (16 name-keyed binary k_ij pairs unchanged). Test
+  `expanded_seed_covers_common_chemicals` asserts `num_components() >= 180` and
+  that a representative slice (incl. new compounds) resolves. Full 2000+ coverage
+  remains Deferred Scope.
+
+- **Full UNIFAC group table (Deferred Scope item — closed out).**
+  `tpt-thermo-eos-activity/src/unifac.rs` `seed_group_table` now defines the
+  **full Original UNIFAC parameter set**: 55 main groups / 119 subgroups with
+  published R_k/Q_k (Hansen et al. 1991; Wittig et al. 2003; Balslev &
+  Abildskov 2002) and the DDBST Aij/Aji interaction matrix for the 23-main-group
+  practical core. Interactions are expanded main-group→subgroup at runtime, so
+  every subgroup in a main group shares the published parameters (the earlier
+  approach only set representative subgroups). New `expanded_seed_molecules`
+  builder (vinyl chloride, acetone, ethyl acetate, acetonitrile, phenol,
+  chlorobenzene, diethyl ether, isobutane, tert-butanol, aniline, methylamine)
+  plus tests `expanded_group_table_defines_more_groups` and
+  `expanded_table_predicts_nonideal_ester_alkane`. `cargo test -p
+  tpt-thermo-eos-activity`, `clippy`, `fmt --check` all green.
 
 The repo is being advanced across multiple sessions/agents. Crates already present
 on disk at this date (beyond Phases 0-5):

@@ -56,6 +56,7 @@ pub mod lle;
 pub mod phase_volume;
 pub mod pt;
 pub mod rachford_rice;
+pub mod stability;
 pub mod variants;
 
 pub use acceleration::AccelerationMemory;
@@ -68,4 +69,5 @@ pub use lle::{lle_isoactivity, LleResult};
 pub use phase_volume::{phase_volume, Phase};
 pub use pt::{flash_pt, FlashCalculator, FlashResult};
 pub use rachford_rice::{rachford_rice, RachfordRiceResult};
+pub use stability::{flash_pt_with_stability, tangent_plane_distance, StabilityOutcome};
 pub use variants::{flash_ph, flash_pu, flash_pv, flash_ts, flash_tv};

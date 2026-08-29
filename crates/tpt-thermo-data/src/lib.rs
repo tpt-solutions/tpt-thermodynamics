@@ -5,9 +5,9 @@
 //! * [`record::ComponentRecord`] — a serde (TOML/JSON) schema in base units
 //!   with physical-constraint validation.
 //! * [`database::SeedComponentDatabase`] — a `ComponentDatabase`
-//!   ([`tpt_thermo_core::component::ComponentDatabase`]) implementation loaded
-//!   from the embedded curated seed set (`data/seed.toml`, ~24 well-known
-//!   compounds) or any user-supplied TOML/JSON.
+//! ([`tpt_thermo_core::component::ComponentDatabase`]) implementation loaded
+//! from the embedded curated seed set (`data/seed.toml`, ~2300 compounds) or
+//! any user-supplied TOML/JSON.
 //! * [`bip::BipTable`] — binary-interaction-parameter storage. The curated seed
 //!   now ships fitted PR/SRK `k_ij` values for common pairs
 //!   (`[[binary_interactions]]` in `data/seed.toml`); every other pair defaults
@@ -59,6 +59,38 @@ mod tests {
         // An unseeded pair defaults to 0.
         let neopentane = db.index_of("neopentane").unwrap();
         assert_eq!(db.binary_interaction(i, neopentane).unwrap(), 0.0);
+    }
+
+    #[test]
+    fn expanded_seed_covers_common_chemicals() {
+        // The deferred-scope expansion pushed the curated set well beyond the
+        // original ~58 compounds; assert a representative slice resolves.
+        let db = SeedComponentDatabase::from_seed();
+        assert!(
+            db.num_components() >= 2000,
+            "expanded seed should exceed 2000 compounds"
+        );
+        for name in [
+            "butene",
+            "pentanol",
+            "ethyl acetate",
+            "pyridine",
+            "xylene",
+            "methylcyclohexane",
+            "dichloromethane",
+            "chlorodifluoromethane",
+            "thiophene",
+            "n-eicosane",
+            "pyrene",
+            "benzoic acid",
+            "bromobenzene",
+            "r245fa",
+        ] {
+            assert!(
+                db.index_of(name).is_some(),
+                "missing expanded compound {name}"
+            );
+        }
     }
 
     #[test]
