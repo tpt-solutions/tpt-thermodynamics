@@ -14,6 +14,7 @@ use crate::mixing::CubicMixing;
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
+use spin::Mutex;
 use tpt_thermo_core::component::ComponentDatabase;
 use tpt_thermo_core::quantities::{
     molar_entropy, MolarEnergy, MolarEntropy, MolarHeatCapacity, MolarVolume, Pressure,
@@ -57,6 +58,13 @@ pub struct CubicEos {
     mixing: Box<dyn CubicMixing>,
     volume_translation: Vec<f64>,
     molar_masses: Vec<f64>,
+    /// Memoised [`Self::mix_params`] keyed on `(T, z)`. `pressure` and
+    /// `ln_fugacity_coefficient` depend on `v` alone beyond `T` and `z`, so a
+    /// root-scan that evaluates `P(v)` hundreds of times reuses the O(n²) mixing
+    /// computation instead of recomputing it on every step. Invalidated by any
+    /// change in `T` or `z`.
+    #[allow(clippy::type_complexity)]
+    mixing_cache: Mutex<Option<(f64, Vec<f64>, (f64, f64, Vec<f64>, Vec<f64>))>>,
 }
 
 impl core::fmt::Debug for CubicEos {
@@ -104,6 +112,7 @@ impl CubicEos {
             mixing,
             volume_translation: vec![0.0; n],
             molar_masses,
+            mixing_cache: Mutex::new(None),
         })
     }
 
@@ -153,12 +162,24 @@ impl CubicEos {
     }
 
     /// Mixture `a`, `b`, and the component `a_i`, `b_i` vectors at `(T, z)`.
+    ///
+    /// Memoised on `(T, z)`: `pressure` and `ln_fugacity_coefficient` are invoked
+    /// repeatedly with a fixed composition while a root-scan varies only `v`, and
+    /// the mixing step is O(n²). The cache is invalidated whenever `T` or `z`
+    /// changes, so results stay exact.
     pub(crate) fn mix_params(&self, t: f64, z: &[f64]) -> (f64, f64, Vec<f64>, Vec<f64>) {
+        if let Some((ct, cz, params)) = self.mixing_cache.lock().as_ref() {
+            if *ct == t && cz.len() == z.len() && cz.iter().zip(z).all(|(a, b)| *a == *b) {
+                return params.clone();
+            }
+        }
         let a = self.a_i_vec(t);
         let b = self.b_i_vec();
         let amix = self.mixing.a_mix(&a, &b, z, t, P_REF);
         let bmix = self.mixing.b_mix(&b, z);
-        (amix, bmix, a, b)
+        let params = (amix, bmix, a, b);
+        *self.mixing_cache.lock() = Some((t, z.to_vec(), params.clone()));
+        params
     }
 
     fn log_term(&self, zc: f64, t: f64, bmix: f64, p: f64) -> (f64, f64) {

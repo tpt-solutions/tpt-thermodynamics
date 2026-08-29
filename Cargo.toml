@@ -39,6 +39,8 @@ tpt-math-optimize-convex = "0.1.0"
 tpt-math-linalg = "0.1.0"
 tpt-eng-props = "0.1.1"
 uom = { version = "0.38", default-features = false }
+# no_std-safe `Sync` mutex used for memoisation caches (works with and without std).
+spin = { version = "0.9", default-features = false, features = ["mutex", "spin_mutex"] }
 
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "warn"

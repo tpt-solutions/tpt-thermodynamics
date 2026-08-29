@@ -5,9 +5,9 @@
 //! * [`record::ComponentRecord`] — a serde (TOML/JSON) schema in base units
 //!   with physical-constraint validation.
 //! * [`database::SeedComponentDatabase`] — a `ComponentDatabase`
-//! ([`tpt_thermo_core::component::ComponentDatabase`]) implementation loaded
-//! from the embedded curated seed set (`data/seed.toml`, ~2300 compounds) or
-//! any user-supplied TOML/JSON.
+//!   ([`tpt_thermo_core::component::ComponentDatabase`]) implementation loaded
+//!   from the embedded curated seed set (`data/seed.toml`, ~2300 compounds) or
+//!   any user-supplied TOML/JSON.
 //! * [`bip::BipTable`] — binary-interaction-parameter storage. The curated seed
 //!   now ships fitted PR/SRK `k_ij` values for common pairs
 //!   (`[[binary_interactions]]` in `data/seed.toml`); every other pair defaults

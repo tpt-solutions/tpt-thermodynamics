@@ -10,6 +10,9 @@
 //!   ([`association`](crate::association)).
 //! * [`SaftVrMie`] — SAFT-VR Mie (Lafitte et al. 2013) sharing the same
 //!   framework with per-component Mie repulsion/attraction ranges.
+//! * [`Esaft`] — eSAFT electrolyte extension: PC-SAFT plus Debye-Hückel
+//!   ion-ion, Born solvation, and ion-segment dispersion terms for electrolyte
+//!   mixtures.
 //!
 //! Pure-component results are exact PC-SAFT; the mixture hard-chain uses the
 //! Carnahan-Starling one-fluid approximation (documented refinement over full
@@ -46,13 +49,16 @@ extern crate alloc;
 
 pub mod association;
 pub mod engine;
+pub mod esaft;
 pub mod parameters;
 pub mod pc_saft;
 pub mod saft_vr_mie;
 
 pub use association::AssociationResult;
+pub use esaft::{electrolyte_term, solvent_dielectric_water, ElectrolyteConfig, Esaft};
 pub use parameters::{
-    AssociationParams, AssociationScheme, SaftComponent, SaftParameters, SEED_SAFT_PARAMETERS,
+    AssociationParams, AssociationScheme, SaftComponent, SaftParameters, SEED_E_SAFT_IONS,
+    SEED_SAFT_PARAMETERS,
 };
 pub use pc_saft::PcSaft;
 pub use saft_vr_mie::SaftVrMie;

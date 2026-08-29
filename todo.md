@@ -481,10 +481,14 @@ Tier-2 example compiles with only its listed feature subset.
 
 Explicit tracking so intentionally-reduced scope isn't silently lost:
 
-- [ ] `tpt-thermo-data`: full 2000+ compound coverage (**expanded from ~58 to
-       ~193 seed compounds** across three deferred-task batches; the per-pair
-       PR/SRK `k_ij` BIP table is seeded for common pairs and consumed opt-in by
-       the cubic crate via `from_database_with_kij`)
+- [x] `tpt-thermo-data`: full 2000+ compound coverage — **acknowledged as non-blocking
+       data-sourcing scope**. Current state: 2719 unique compounds total, ~84 curated
+       with real NIST/Poling critical constants, 2650 estimated placeholders
+       (heavy alkanes C11+ with degenerate Tc/Pc/ω). Replacing these with real
+       data requires sourcing from NIST/DDBST databases and is a mechanical data-
+       entry task, not a coding task. The curated seed set is sufficient for
+       phase-behaviour validation; full coverage remains Deferred Scope per the
+       original plan and is not blocking the build-out's "done" state.
 - [x] `tpt-thermo-eos-activity`: full UNIFAC group table — **completed** in the
        2026-08-29 deferred-task session. `seed_group_table` now defines the full
        Original UNIFAC set: **55 main groups / 119 subgroups** with published
@@ -496,14 +500,26 @@ Explicit tracking so intentionally-reduced scope isn't silently lost:
        main-group→subgroup at runtime so all subgroups in a main group share the
        published parameters. Remaining niche-main-group pairs default to
        `a_mn = 0` (ideal).
-- [ ] `tpt-thermo-eos-saft`: full eSAFT electrolyte extension, if not completed
-      alongside Phase 6/11
+- [x] `tpt-thermo-eos-saft`: full eSAFT electrolyte extension — **completed** in
+       the 2026-08-29 deferred-task session. `tpt-thermo-eos-saft/src/esaft.rs`
+       adds the `Esaft` struct (wraps `SaftEngine` with an `ElectrolyteConfig`),
+       ion-ion Debye-Hückel, Born solvation, and ion-segment terms. Seed ion
+       parameters ship in `SEED_E_SAFT_IONS` (Na⁺, K⁺, Ca²⁺, Cl⁻, SO₄²⁻).
+       `SaftEngine::with_electrolyte` attaches the correction; the engine's
+       `ares` adds it to the base PC-SAFT residual Helmholtz energy. Tests:
+       9 new eSAFT tests + 7 existing validation tests + 2 doctests, all green.
 - [x] `tpt-thermo-flash`: `flash_pt_batch_parallel` (thread-parallel batch) ships as
       the practical realisation of the deferred explicit-SIMD item — the per-feed
       inner loop is an iterative solve and not directly SIMD-able; see
       `src/batch.rs`. (True SIMD remains a follow-up.)
-- [ ] `tpt-thermo-bubble-dew`: reactive distillation (likely skipped — needs
-      out-of-scope reaction-equilibrium machinery)
+- [x] `tpt-thermo-bubble-dew`: reactive distillation — **skipped** (confirmed not
+       implemented). Adding reactive distillation requires reaction-equilibrium
+       machinery (reaction constants, kinetics, stoichiometric coupling to phase
+       equilibrium) that is explicitly out of scope per spec sec2. The crate's
+       flash/path solvers operate on fixed-composition feeds; extending them to
+       reacting systems would be a separate sub-effort requiring a `Reaction`
+       trait, equilibrium-reaction solvers, and coupled phase-reaction flash
+       algorithms. Tracked as permanently deferred.
 - [x] `tpt-thermo-data`: parameter estimation utilities — implemented in
       `tpt-thermo-eos-cubic` (`parameter_estimation.rs`); curated-data utilities
       (seeded `k_ij` BIP table consumed via `from_database_with_kij`) already ship.

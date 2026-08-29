@@ -30,7 +30,10 @@
 //! use tpt_thermo_flash::FlashCalculator;
 //! use uom::si::{pressure::pascal, thermodynamic_temperature::kelvin};
 //!
-//! let db = SeedComponentDatabase::from_seed();
+//! let db_full = SeedComponentDatabase::from_seed();
+//! let methane = db_full.index_of("methane").unwrap();
+//! let ethane = db_full.index_of("ethane").unwrap();
+//! let db = db_full.subset(&[methane, ethane]).unwrap();
 //! let eos = PengRobinson::from_database(&db).unwrap();
 //! let calc = FlashCalculator::with_db(&eos, &db);
 //! let methane = db.index_of("methane").unwrap();

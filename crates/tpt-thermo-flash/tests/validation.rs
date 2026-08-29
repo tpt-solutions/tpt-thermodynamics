@@ -9,7 +9,10 @@ use tpt_thermo_flash::{flash_pt, FlashCalculator};
 use uom::si::{pressure::pascal, thermodynamic_temperature::kelvin};
 
 fn methane_ethane() -> (SeedComponentDatabase, PengRobinson, Vec<f64>) {
-    let db = SeedComponentDatabase::from_seed();
+    let db_full = SeedComponentDatabase::from_seed();
+    let methane = db_full.index_of("methane").unwrap();
+    let ethane = db_full.index_of("ethane").unwrap();
+    let db = db_full.subset(&[methane, ethane]).unwrap();
     let eos = PengRobinson::from_database(&db).unwrap();
     let methane = db.index_of("methane").unwrap();
     let ethane = db.index_of("ethane").unwrap();
@@ -169,12 +172,14 @@ fn multicomponent_flash_material_balance() {
     let full = SeedComponentDatabase::from_seed();
     let comps = ["methane", "ethane", "propane", "n-butane", "n-pentane"];
     let fracs = [0.6_f64, 0.2, 0.1, 0.07, 0.03];
-    let mut z = vec![0.0_f64; full.num_components()];
-    for (c, f) in comps.iter().zip(fracs.iter()) {
-        z[full.index_of(c).unwrap()] = *f;
+    let indices: Vec<usize> = comps.iter().map(|c| full.index_of(c).unwrap()).collect();
+    let db = full.subset(&indices).unwrap();
+    let eos = PengRobinson::from_database(&db).unwrap();
+    let calc = FlashCalculator::with_db(&eos, &db);
+    let mut z = vec![0.0_f64; db.num_components()];
+    for (i, f) in indices.iter().zip(fracs.iter()) {
+        z[db.index_of(comps[i - indices[0]]).unwrap()] = *f;
     }
-    let eos = PengRobinson::from_database(&full).unwrap();
-    let calc = FlashCalculator::with_db(&eos, &full);
 
     // 250 K, 5 MPa: inside the VL envelope for this mixture.
     let t = Temperature::new::<kelvin>(250.0);
@@ -204,7 +209,7 @@ fn multicomponent_flash_material_balance() {
     );
 
     // Vapor must be enriched in the lightest component (methane).
-    let methane = full.index_of("methane").unwrap();
+    let methane = db.index_of("methane").unwrap();
     assert!(
         res.vapor_composition[methane] > res.liquid_composition[methane],
         "methane should enrich the vapor"

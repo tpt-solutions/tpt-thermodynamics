@@ -319,10 +319,13 @@ mod tests {
         // methane/ethane @ 250 K, 50 bar: the bare successive-substitution flash
         // locks onto a spurious two-phase split, but the feed is globally stable
         // (TPD = 0). The stability-tested driver must return single phase.
-        let db = SeedComponentDatabase::from_seed();
-        let eos = PengRobinson::from_database(&db).unwrap();
+        let db_full = SeedComponentDatabase::from_seed();
+        let methane = db_full.index_of("methane").unwrap();
+        let ethane = db_full.index_of("ethane").unwrap();
+        let db = db_full.subset(&[methane, ethane]).unwrap();
         let methane = db.index_of("methane").unwrap();
         let ethane = db.index_of("ethane").unwrap();
+        let eos = PengRobinson::from_database(&db).unwrap();
         let mut z = vec![0.0; db.num_components()];
         z[methane] = 0.5;
         z[ethane] = 0.5;
@@ -359,10 +362,13 @@ mod tests {
         // ethane/propane @ 250 K, 10 bar: the bare Wilson-initialised flash
         // collapses to single phase, but the feed is unstable (TPD < 0). The driver
         // must recover the genuine two-phase split via the forced path.
-        let db = SeedComponentDatabase::from_seed();
-        let eos = PengRobinson::from_database(&db).unwrap();
+        let db_full = SeedComponentDatabase::from_seed();
+        let ethane = db_full.index_of("ethane").unwrap();
+        let propane = db_full.index_of("propane").unwrap();
+        let db = db_full.subset(&[ethane, propane]).unwrap();
         let ethane = db.index_of("ethane").unwrap();
         let propane = db.index_of("propane").unwrap();
+        let eos = PengRobinson::from_database(&db).unwrap();
         let mut z = vec![0.0; db.num_components()];
         z[ethane] = 0.5;
         z[propane] = 0.5;

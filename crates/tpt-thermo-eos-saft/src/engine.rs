@@ -19,6 +19,8 @@
 //! asymmetric mixtures).
 
 use crate::association::{self, AssociationResult};
+use crate::esaft;
+pub use crate::esaft::ElectrolyteConfig;
 use crate::parameters::SaftParameters;
 use tpt_thermo_core::component::ComponentDatabase;
 use tpt_thermo_core::convergence::NumericalIssueReason;
@@ -43,6 +45,7 @@ const PI: f64 = core::f64::consts::PI;
 pub enum SaftFlavor {
     PcSaft,
     VrMie,
+    ESaft,
 }
 
 /// The shared SAFT engine.
@@ -52,6 +55,8 @@ pub struct SaftEngine {
     kij: Vec<Vec<f64>>,
     molar_masses: Vec<f64>,
     pub(crate) flavor: SaftFlavor,
+    /// Optional electrolyte configuration (eSAFT extension).
+    pub(crate) electrolyte: Option<ElectrolyteConfig>,
 }
 
 impl SaftEngine {
@@ -64,6 +69,7 @@ impl SaftEngine {
             kij,
             molar_masses,
             flavor: SaftFlavor::PcSaft,
+            electrolyte: None,
         }
     }
 
@@ -82,6 +88,17 @@ impl SaftEngine {
         let mut engine = Self::new(params, mm);
         engine.flavor = flavor;
         Ok(engine)
+    }
+
+    /// Attach an electrolyte configuration (eSAFT extension).
+    ///
+    /// When attached, the electrolyte correction (ion-ion Debye-Hückel + Born
+    /// solvation + ion-segment dispersion) is added to the base PC-SAFT
+    /// `a^res/(RT)`. This also sets the flavor to [`SaftFlavor::ESaft`].
+    pub fn with_electrolyte(mut self, config: ElectrolyteConfig) -> Self {
+        self.electrolyte = Some(config);
+        self.flavor = SaftFlavor::ESaft;
+        self
     }
 
     /// Attach a binary interaction matrix `k_ij` (dimensionless, symmetric).
@@ -172,7 +189,15 @@ impl SaftEngine {
         // Association.
         let assoc = self.association_term(t, rho, zeta3, x)?;
 
-        Ok(ahc + disp + assoc)
+        // Electrolyte correction (eSAFT extension).
+        let elec = match &self.electrolyte {
+            Some(config) => {
+                esaft::electrolyte_term(t, 1.0 / v, x, &self.params, &self.kij, config.epsr)?
+            }
+            None => 0.0,
+        };
+
+        Ok(ahc + disp + assoc + elec)
     }
 
     fn association_term(
