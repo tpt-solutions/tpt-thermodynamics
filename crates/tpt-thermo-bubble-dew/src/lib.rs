@@ -37,7 +37,10 @@
 //! use tpt_thermo_bubble_dew::{BubbleDewSolver, KProvider};
 //! use uom::si::{pressure::pascal, thermodynamic_temperature::kelvin};
 //!
-//! let db = SeedComponentDatabase::from_seed();
+//! let db_full = SeedComponentDatabase::from_seed();
+//! let benzene = db_full.index_of("benzene").unwrap();
+//! let toluene = db_full.index_of("toluene").unwrap();
+//! let db = db_full.subset(&[benzene, toluene]).unwrap();
 //! let eos = PengRobinson::from_database(&db).unwrap();
 //! let solver = BubbleDewSolver::new(&eos as &dyn KProvider, &db);
 //!

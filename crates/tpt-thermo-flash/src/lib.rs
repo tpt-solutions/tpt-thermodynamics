@@ -12,6 +12,8 @@
 //!   [`tpt_thermo_core::mixing::ExcessGibbsModel`] (e.g. the NRTL/Wilson/UNIQUAC
 //!   models in `tpt-thermo-eos-activity`).
 //! * [`batch::flash_pt_batch`] — a per-composition loop over a feed table.
+//! * [`batch::flash_pt_batch_parallel`] — a `std`-feature, cross-thread variant of
+//!   the batch (the practical realisation of the deferred explicit-SIMD batch).
 //!
 //! K-values are built from the equilibrium fugacity equality `K_i = φ_i^L/φ_i^V`,
 //! where each phase's molar volume is recovered by root-solving the EoS pressure
@@ -28,7 +30,10 @@
 //! use tpt_thermo_flash::FlashCalculator;
 //! use uom::si::{pressure::pascal, thermodynamic_temperature::kelvin};
 //!
-//! let db = SeedComponentDatabase::from_seed();
+//! let db_full = SeedComponentDatabase::from_seed();
+//! let methane = db_full.index_of("methane").unwrap();
+//! let ethane = db_full.index_of("ethane").unwrap();
+//! let db = db_full.subset(&[methane, ethane]).unwrap();
 //! let eos = PengRobinson::from_database(&db).unwrap();
 //! let calc = FlashCalculator::with_db(&eos, &db);
 //! let methane = db.index_of("methane").unwrap();
@@ -54,13 +59,18 @@ pub mod lle;
 pub mod phase_volume;
 pub mod pt;
 pub mod rachford_rice;
+pub mod stability;
 pub mod variants;
 
 pub use acceleration::AccelerationMemory;
+pub use batch::flash_pt_batch;
+#[cfg(feature = "std")]
+pub use batch::flash_pt_batch_parallel;
 pub use error::FlashError;
 pub use initialization::wilson_k_values;
 pub use lle::{lle_isoactivity, LleResult};
 pub use phase_volume::{phase_volume, Phase};
 pub use pt::{flash_pt, FlashCalculator, FlashResult};
 pub use rachford_rice::{rachford_rice, RachfordRiceResult};
+pub use stability::{flash_pt_with_stability, tangent_plane_distance, StabilityOutcome};
 pub use variants::{flash_ph, flash_pu, flash_pv, flash_ts, flash_tv};

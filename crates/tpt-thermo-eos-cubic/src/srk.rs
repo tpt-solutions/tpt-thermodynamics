@@ -20,13 +20,28 @@ pub struct SoaveRedlichKwong {
 }
 
 impl SoaveRedlichKwong {
-    /// Build from a [`ComponentDatabase`] with the default alpha and vdW mixing.
+    /// Build from a [`ComponentDatabase`] with the default alpha and vdW mixing
+    /// (binary interactions default to `0.0`).
     pub fn from_database(db: &dyn ComponentDatabase) -> Result<Self, ThermoError> {
         let inner = CubicEos::from_database(
             CubicModel::SoaveRedlichKwong,
             db,
             soave(),
             Box::new(VdwMixing::new(db.num_components())),
+        )?;
+        Ok(Self { inner })
+    }
+
+    /// Build from a [`ComponentDatabase`] with the default alpha and van der Waals
+    /// one-fluid mixing that consumes the database's seeded/fitted `k_ij`
+    /// parameters (opt-in; use [`SoaveRedlichKwong::from_database`] for the
+    /// zero-BIP default).
+    pub fn from_database_with_kij(db: &dyn ComponentDatabase) -> Result<Self, ThermoError> {
+        let inner = CubicEos::from_database(
+            CubicModel::SoaveRedlichKwong,
+            db,
+            soave(),
+            Box::new(VdwMixing::from_database(db)),
         )?;
         Ok(Self { inner })
     }

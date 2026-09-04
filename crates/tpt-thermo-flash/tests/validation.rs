@@ -1,15 +1,18 @@
 //! Validation tests for the flash solvers against the cubic EoS + seed dataset.
 
 use tpt_thermo_core::component::ComponentDatabase;
-use tpt_thermo_core::EquationOfState;
 use tpt_thermo_core::quantities::{Pressure, Temperature};
+use tpt_thermo_core::EquationOfState;
 use tpt_thermo_data::SeedComponentDatabase;
 use tpt_thermo_eos_cubic::PengRobinson;
 use tpt_thermo_flash::{flash_pt, FlashCalculator};
 use uom::si::{pressure::pascal, thermodynamic_temperature::kelvin};
 
 fn methane_ethane() -> (SeedComponentDatabase, PengRobinson, Vec<f64>) {
-    let db = SeedComponentDatabase::from_seed();
+    let db_full = SeedComponentDatabase::from_seed();
+    let methane = db_full.index_of("methane").unwrap();
+    let ethane = db_full.index_of("ethane").unwrap();
+    let db = db_full.subset(&[methane, ethane]).unwrap();
     let eos = PengRobinson::from_database(&db).unwrap();
     let methane = db.index_of("methane").unwrap();
     let ethane = db.index_of("ethane").unwrap();
@@ -71,11 +74,13 @@ fn ph_flash_matches_target_enthalpy() {
     let p = Pressure::new::<pascal>(2.0e6);
     let pt = calc.flash_pt(t0, p, &z).unwrap();
     let h: f64 = (1.0 - pt.vapor_fraction)
-        * eos.molar_enthalpy(t0, pt.liquid_volume, &pt.liquid_composition)
+        * eos
+            .molar_enthalpy(t0, pt.liquid_volume, &pt.liquid_composition)
             .unwrap()
             .value
         + pt.vapor_fraction
-            * eos.molar_enthalpy(t0, pt.vapor_volume, &pt.vapor_composition)
+            * eos
+                .molar_enthalpy(t0, pt.vapor_volume, &pt.vapor_composition)
                 .unwrap()
                 .value;
     let h_target =
@@ -83,14 +88,19 @@ fn ph_flash_matches_target_enthalpy() {
     let ph = calc.flash_ph(h_target, p, &z).unwrap();
     // Recompute enthalpy of the PH result and confirm it matches the target.
     let h2: f64 = (1.0 - ph.vapor_fraction)
-        * eos.molar_enthalpy(t0, ph.liquid_volume, &ph.liquid_composition)
+        * eos
+            .molar_enthalpy(t0, ph.liquid_volume, &ph.liquid_composition)
             .unwrap()
             .value
         + ph.vapor_fraction
-            * eos.molar_enthalpy(t0, ph.vapor_volume, &ph.vapor_composition)
+            * eos
+                .molar_enthalpy(t0, ph.vapor_volume, &ph.vapor_composition)
                 .unwrap()
                 .value;
-    assert!((h2 - h).abs() / h.abs() < 1e-3, "PH flash enthalpy should match target");
+    assert!(
+        (h2 - h).abs() / h.abs() < 1e-3,
+        "PH flash enthalpy should match target"
+    );
 }
 
 #[test]
@@ -120,3 +130,88 @@ fn lle_isoactivity_splits_nonideal_binary() {
     assert!(max_diff > 1e-3, "LLE should produce two distinct phases");
 }
 
+#[test]
+fn parallel_batch_matches_serial() {
+    use tpt_thermo_flash::flash_pt_batch;
+    let (db, eos, _z) = methane_ethane();
+    let methane = db.index_of("methane").unwrap();
+    let ethane = db.index_of("ethane").unwrap();
+    // Build a feed table sweeping the methane mole fraction.
+    let mut feeds = Vec::new();
+    for k in 0..12 {
+        let mut zk = vec![0.0_f64; db.num_components()];
+        let x = 0.1 + 0.07 * k as f64;
+        zk[methane] = x;
+        zk[ethane] = 1.0 - x;
+        feeds.push(zk);
+    }
+    let t = Temperature::new::<kelvin>(220.0);
+    let p = Pressure::new::<pascal>(3.0e6);
+    let serial = flash_pt_batch(&eos, Some(&db), t, p, &feeds).unwrap();
+    let parallel =
+        tpt_thermo_flash::flash_pt_batch_parallel(&eos, Some(&db), t, p, &feeds).unwrap();
+    assert_eq!(serial.len(), parallel.len());
+    for (s, par) in serial.iter().zip(parallel.iter()) {
+        assert!(
+            (s.vapor_fraction - par.vapor_fraction).abs() < 1e-9,
+            "batch mismatch"
+        );
+    }
+}
+
+/// Spec sec6 breadth expansion (seed of the 20+ multicomponent flash target).
+///
+/// A natural-gas-like five-component mixture (methane/ethane/propane/n-butane/
+/// n-pentane) at a temperature/pressure inside its two-phase envelope must flash
+/// to a converged VLE split whose phase compositions close the overall material
+/// balance `z = (1−β)·x + β·y`, and whose vapor is enriched in the light
+/// component. This is one representative multicomponent system; the full breadth
+/// set is a mechanical extension of the same harness.
+#[test]
+fn multicomponent_flash_material_balance() {
+    let full = SeedComponentDatabase::from_seed();
+    let comps = ["methane", "ethane", "propane", "n-butane", "n-pentane"];
+    let fracs = [0.6_f64, 0.2, 0.1, 0.07, 0.03];
+    let indices: Vec<usize> = comps.iter().map(|c| full.index_of(c).unwrap()).collect();
+    let db = full.subset(&indices).unwrap();
+    let eos = PengRobinson::from_database(&db).unwrap();
+    let calc = FlashCalculator::with_db(&eos, &db);
+    let mut z = vec![0.0_f64; db.num_components()];
+    for (i, f) in indices.iter().zip(fracs.iter()) {
+        z[db.index_of(comps[i - indices[0]]).unwrap()] = *f;
+    }
+
+    // 250 K, 5 MPa: inside the VL envelope for this mixture.
+    let t = Temperature::new::<kelvin>(250.0);
+    let p = Pressure::new::<pascal>(5.0e6);
+    let res = calc.flash_pt(t, p, &z).unwrap();
+    assert!(res.converged, "multicomponent flash should converge");
+    assert_eq!(res.phase_flag, tpt_thermo_flash::pt::PhaseFlag::TwoPhase);
+    assert!(
+        (0.0..1.0).contains(&res.vapor_fraction),
+        "vapor fraction must be in (0, 1)"
+    );
+
+    // Component-wise material balance closure.
+    let beta = res.vapor_fraction;
+    let max_err = z
+        .iter()
+        .enumerate()
+        .filter(|(_, &zi)| zi > 0.0)
+        .map(|(i, &zi)| {
+            let recon = (1.0 - beta) * res.liquid_composition[i] + beta * res.vapor_composition[i];
+            (recon - zi).abs()
+        })
+        .fold(0.0_f64, f64::max);
+    assert!(
+        max_err < 1.0e-6,
+        "material balance closure error {max_err:.2e} exceeds tolerance"
+    );
+
+    // Vapor must be enriched in the lightest component (methane).
+    let methane = db.index_of("methane").unwrap();
+    assert!(
+        res.vapor_composition[methane] > res.liquid_composition[methane],
+        "methane should enrich the vapor"
+    );
+}

@@ -21,7 +21,7 @@
 //! | `flash`      | `flash`                    | `tpt-thermo-flash`       |
 //! | `transport`  | `transport`                | `tpt-thermo-transport`   |
 //! | `electrolyte`| `electrolyte`              | `tpt-thermo-electrolyte` |
-//! | `polymer`    | `polymer`                  | `tpt-thermo-polymer`     | *(pending Phase 12)*
+//! | `polymer`    | `polymer`                  | `tpt-thermo-polymer`     |
 //!
 //! `cargo build --no-default-features` yields only `core` + `data`; each feature
 //! builds standalone and `--all-features` builds them all.
@@ -29,24 +29,24 @@
 pub use tpt_thermo_core as core;
 pub use tpt_thermo_data as data;
 
-#[cfg(feature = "cubic")]
-pub use tpt_thermo_eos_cubic as eos_cubic;
-#[cfg(feature = "activity")]
-pub use tpt_thermo_eos_activity as eos_activity;
-#[cfg(feature = "saft")]
-pub use tpt_thermo_eos_saft as eos_saft;
-#[cfg(feature = "phase")]
-pub use tpt_thermo_phase as phase;
 #[cfg(feature = "bubble-dew")]
 pub use tpt_thermo_bubble_dew as bubble_dew;
-#[cfg(feature = "flash")]
-pub use tpt_thermo_flash as flash;
-#[cfg(feature = "transport")]
-pub use tpt_thermo_transport as transport;
 #[cfg(feature = "electrolyte")]
 pub use tpt_thermo_electrolyte as electrolyte;
-// #[cfg(feature = "polymer")]
-// pub use tpt_thermo_polymer as polymer;
+#[cfg(feature = "activity")]
+pub use tpt_thermo_eos_activity as eos_activity;
+#[cfg(feature = "cubic")]
+pub use tpt_thermo_eos_cubic as eos_cubic;
+#[cfg(feature = "saft")]
+pub use tpt_thermo_eos_saft as eos_saft;
+#[cfg(feature = "flash")]
+pub use tpt_thermo_flash as flash;
+#[cfg(feature = "phase")]
+pub use tpt_thermo_phase as phase;
+#[cfg(feature = "polymer")]
+pub use tpt_thermo_polymer as polymer;
+#[cfg(feature = "transport")]
+pub use tpt_thermo_transport as transport;
 
 pub mod api;
 pub mod error;

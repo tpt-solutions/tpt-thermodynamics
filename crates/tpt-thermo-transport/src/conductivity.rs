@@ -69,16 +69,18 @@ pub fn liquid_thermal_conductivity(
                 ),
             ));
         }
-        let lambda_i =
-            (tc.powf(5.0 / 6.0) / (m_g.sqrt() * pc_bar.powf(2.0 / 3.0))) * 0.227
-                * (1.0 - tr).powf(0.38);
+        let lambda_i = (tc.powf(5.0 / 6.0) / (m_g.sqrt() * pc_bar.powf(2.0 / 3.0)))
+            * 0.227
+            * (1.0 - tr).powf(0.38);
         sum += zi * lambda_i;
         total += zi;
     }
     if total <= 0.0 {
         return Err(ThermoError::InvalidInput("no positive mole fractions"));
     }
-    Ok(ThermalConductivity::new::<watt_per_meter_kelvin>(sum / 1.0e3))
+    Ok(ThermalConductivity::new::<watt_per_meter_kelvin>(
+        sum / 1.0e3,
+    ))
 }
 
 /// Filippov (binary) mixture thermal conductivity (W·m⁻¹·K⁻¹).

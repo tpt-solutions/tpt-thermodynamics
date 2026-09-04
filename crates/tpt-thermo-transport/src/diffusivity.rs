@@ -57,8 +57,7 @@ pub fn fuller_schettler_giddings(
     let vi = diffusion_volume(ni);
     let vj = diffusion_volume(nj);
     let s = (vi.powf(1.0 / 3.0) + vj.powf(1.0 / 3.0)).powi(2);
-    let d_cm2_s =
-        (1.0133e-3 * tk.powf(1.75) * (1.0 / mi + 1.0 / mj).sqrt()) / (p_atm * s);
+    let d_cm2_s = (1.0133e-3 * tk.powf(1.75) * (1.0 / mi + 1.0 / mj).sqrt()) / (p_atm * s);
     Ok(DiffusionCoefficient::new::<square_meter_per_second>(
         d_cm2_s * 1.0e-4,
     ))

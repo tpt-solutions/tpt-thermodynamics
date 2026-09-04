@@ -177,6 +177,30 @@ fn hv_mixing_couples_excess_model() {
     assert!(sum.is_finite());
 }
 
+#[test]
+fn seeded_bips_are_consumed_by_cubic() {
+    let db = db();
+    let co2 = db.index_of("carbon dioxide").unwrap();
+    let methane = db.index_of("methane").unwrap();
+    // The seed ships a non-zero PR k_ij for CO2-methane; the opt-in constructor
+    // must produce an EoS that differs from the zero-BIP default.
+    let pr_zero = PengRobinson::from_database(&db).unwrap();
+    let pr_kij = PengRobinson::from_database_with_kij(&db).unwrap();
+    let t = Temperature::new::<kelvin>(280.0);
+    let p = Pressure::new::<pascal>(1.0e5);
+    let mut z = vec![0.0; db.num_components()];
+    z[co2] = 0.5;
+    z[methane] = 0.5;
+    let v_zero = pr_zero.solve_phase(t, p, &z, Phase::Vapor).unwrap();
+    let v_kij = pr_kij.solve_phase(t, p, &z, Phase::Vapor).unwrap();
+    let ln_zero = pr_zero.ln_fugacity_coefficient(t, v_zero, &z, co2).unwrap();
+    let ln_kij = pr_kij.ln_fugacity_coefficient(t, v_kij, &z, co2).unwrap();
+    assert!(
+        (ln_zero - ln_kij).abs() > 1e-4,
+        "seeded BIPs must change the fugacity coefficient"
+    );
+}
+
 // --- helpers -------------------------------------------------------------
 
 fn unit(i: usize) -> Vec<f64> {

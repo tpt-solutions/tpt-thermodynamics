@@ -63,14 +63,7 @@ pub fn rachford_rice(k: &[f64], z: &[f64]) -> Result<RachfordRiceResult, ThermoE
                 1.0
             }
         } else {
-            brent(
-                |b| g(b, k, z),
-                0.0,
-                1.0,
-                1e-13,
-                200,
-            )
-            .map_err(ThermoError::Numerical)?
+            brent(|b| g(b, k, z), 0.0, 1.0, 1e-13, 200).map_err(ThermoError::Numerical)?
         }
     };
 

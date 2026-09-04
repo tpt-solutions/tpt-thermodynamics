@@ -18,11 +18,7 @@ tpt-thermo-bubble-dew = { path = "../tpt-thermo-bubble-dew", optional = true }
 tpt-thermo-flash = { path = "../tpt-thermo-flash", optional = true }
 tpt-thermo-transport = { path = "../tpt-thermo-transport", optional = true }
 tpt-thermo-electrolyte = { path = "../tpt-thermo-electrolyte", optional = true }
-
-# Phase 12 (`tpt-thermo-polymer`) is not yet scaffolded; the `polymer` feature and
-# dependency are intentionally omitted until that crate exists. Re-add when Phase 12
-# lands:
-# tpt-thermo-polymer = { path = "../tpt-thermo-polymer", optional = true }
+tpt-thermo-polymer = { path = "../tpt-thermo-polymer", optional = true }
 
 [features]
 default = []
@@ -34,7 +30,7 @@ bubble-dew = ["tpt-thermo-bubble-dew"]
 flash = ["tpt-thermo-flash"]
 transport = ["tpt-thermo-transport"]
 electrolyte = ["tpt-thermo-electrolyte"]
-# polymer = ["tpt-thermo-polymer"]
+polymer = ["tpt-thermo-polymer"]
 data = []
 
 [lib]

@@ -1,0 +1,31 @@
+# Component-import template for tpt-thermo-data.
+#
+# Copy the [[components]] block below once per compound, fill in every field,
+# and either:
+#   (a) append the filled block into `data/seed.toml` for a permanent addition
+#       (it's compiled in via `include_str!`, so a rebuild picks it up), or
+#   (b) save this file elsewhere and load it standalone at runtime with
+#       `SeedComponentDatabase::from_toml_str(&contents)`.
+# See ../../../DATA_SOURCING.md for where to find real values and full
+# instructions. Every block MUST carry a real, truthful `source` string —
+# never leave it blank or guess a value.
+
+[[components]]
+schema_version = 1                 # bump only if the schema itself changes; leave at 1
+name = ""                          # canonical lowercase name, unique in the database, e.g. "ethylene glycol"
+formula = ""                       # optional molecular formula, e.g. "C2H6O2"
+cas = ""                           # optional CAS registry number, e.g. "107-21-1"
+critical_temperature_k = 0.0       # K; must be in (0, 2000]
+critical_pressure_pa = 0.0         # Pa; must be in (0, 1.0e9]
+acentric_factor = 0.0              # dimensionless Pitzer omega; must be in [-0.6, 1.6]
+molar_mass_kg_per_mol = 0.0        # kg/mol; must be in [1e-4, 1.0]
+normal_boiling_point_k = 0.0       # optional K; must be > 0 and <= critical_temperature_k (omit the line if unknown)
+source = ""                        # REQUIRED: where this came from, e.g. "NIST WebBook" or "Poling et al. 2001"
+
+# --- Optional: binary interaction parameter (only if you're also adding a
+# fitted/literature k_ij for a pair of components already in the database) ---
+# [[binary_interactions]]
+# a = ""            # first component's `name` (must already exist in the database)
+# b = ""            # second component's `name`
+# k_ij = 0.0        # dimensionless, symmetric
+# source = ""       # REQUIRED provenance, e.g. "Poling et al. 2001, ch. 8"

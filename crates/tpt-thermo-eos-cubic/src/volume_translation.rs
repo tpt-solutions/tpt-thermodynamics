@@ -31,17 +31,35 @@ pub struct VolumeTranslated {
 }
 
 impl VolumeTranslated {
-    /// Build a volume-translated Peng-Robinson model from a database.
+    /// Build a volume-translated Peng-Robinson model from a database (binary
+    /// interactions default to `0.0`).
     pub fn peng_robinson(db: &dyn ComponentDatabase) -> Result<Self, ThermoError> {
-        Self::build(CubicModel::PengRobinson, db)
+        Self::build(CubicModel::PengRobinson, db, false)
     }
 
-    /// Build a volume-translated Soave-Redlich-Kwong model from a database.
+    /// Build a volume-translated Peng-Robinson model that consumes the database's
+    /// seeded/fitted `k_ij` parameters (opt-in).
+    pub fn peng_robinson_with_kij(db: &dyn ComponentDatabase) -> Result<Self, ThermoError> {
+        Self::build(CubicModel::PengRobinson, db, true)
+    }
+
+    /// Build a volume-translated Soave-Redlich-Kwong model from a database
+    /// (binary interactions default to `0.0`).
     pub fn soave_redlich_kwong(db: &dyn ComponentDatabase) -> Result<Self, ThermoError> {
-        Self::build(CubicModel::SoaveRedlichKwong, db)
+        Self::build(CubicModel::SoaveRedlichKwong, db, false)
     }
 
-    fn build(model: CubicModel, db: &dyn ComponentDatabase) -> Result<Self, ThermoError> {
+    /// Build a volume-translated Soave-Redlich-Kwong model that consumes the
+    /// database's seeded/fitted `k_ij` parameters (opt-in).
+    pub fn soave_redlich_kwong_with_kij(db: &dyn ComponentDatabase) -> Result<Self, ThermoError> {
+        Self::build(CubicModel::SoaveRedlichKwong, db, true)
+    }
+
+    fn build(
+        model: CubicModel,
+        db: &dyn ComponentDatabase,
+        use_kij: bool,
+    ) -> Result<Self, ThermoError> {
         let n = db.num_components();
         let mut c = Vec::with_capacity(n);
         for i in 0..n {
@@ -50,8 +68,12 @@ impl VolumeTranslated {
             let omega = db.acentric_factor(i)?;
             c.push(peneloux_c(tc, pc, omega));
         }
-        let inner = CubicEos::from_database(model, db, soave(), Box::new(VdwMixing::new(n)))?
-            .with_volume_translation(c);
+        let mixing: Box<dyn crate::mixing::CubicMixing> = if use_kij {
+            Box::new(VdwMixing::from_database(db))
+        } else {
+            Box::new(VdwMixing::new(n))
+        };
+        let inner = CubicEos::from_database(model, db, soave(), mixing)?.with_volume_translation(c);
         Ok(Self { inner })
     }
 

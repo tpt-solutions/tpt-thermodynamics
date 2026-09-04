@@ -8,9 +8,7 @@
 use tpt_thermo_core::convergence::ConvergenceStatus;
 use tpt_thermo_core::eos::EquationOfState;
 use tpt_thermo_core::error::ThermoError;
-use tpt_thermo_core::quantities::{
-    MolarEnergy, MolarEntropy, MolarVolume, Pressure, Temperature,
-};
+use tpt_thermo_core::quantities::{MolarEnergy, MolarEntropy, MolarVolume, Pressure, Temperature};
 use uom::si::molar_energy::joule_per_mole;
 use uom::si::molar_volume::cubic_meter_per_mole;
 use uom::si::thermodynamic_temperature::kelvin;
@@ -31,8 +29,12 @@ fn mix_enthalpy<E: EquationOfState + ?Sized>(
     t: Temperature,
     r: &FlashResult,
 ) -> Result<f64, ThermoError> {
-    let hl = eos.molar_enthalpy(t, r.liquid_volume, &r.liquid_composition)?.value;
-    let hv = eos.molar_enthalpy(t, r.vapor_volume, &r.vapor_composition)?.value;
+    let hl = eos
+        .molar_enthalpy(t, r.liquid_volume, &r.liquid_composition)?
+        .value;
+    let hv = eos
+        .molar_enthalpy(t, r.vapor_volume, &r.vapor_composition)?
+        .value;
     Ok((1.0 - r.vapor_fraction) * hl + r.vapor_fraction * hv)
 }
 
@@ -42,8 +44,12 @@ fn mix_entropy<E: EquationOfState + ?Sized>(
     t: Temperature,
     r: &FlashResult,
 ) -> Result<f64, ThermoError> {
-    let sl = eos.molar_entropy(t, r.liquid_volume, &r.liquid_composition)?.value;
-    let sv = eos.molar_entropy(t, r.vapor_volume, &r.vapor_composition)?.value;
+    let sl = eos
+        .molar_entropy(t, r.liquid_volume, &r.liquid_composition)?
+        .value;
+    let sv = eos
+        .molar_entropy(t, r.vapor_volume, &r.vapor_composition)?
+        .value;
     Ok((1.0 - r.vapor_fraction) * sl + r.vapor_fraction * sv)
 }
 
@@ -104,10 +110,18 @@ where
             }
         } else {
             // No sign change found in the searchable bracket: return the closer split.
-            return if ra.abs() < rb.abs() { Ok(best_a) } else { Ok(best_b) };
+            return if ra.abs() < rb.abs() {
+                Ok(best_a)
+            } else {
+                Ok(best_b)
+            };
         }
     }
-    if ra.abs() < rb.abs() { Ok(best_a) } else { Ok(best_b) }
+    if ra.abs() < rb.abs() {
+        Ok(best_a)
+    } else {
+        Ok(best_b)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -129,9 +143,17 @@ pub(crate) fn flash_ph_impl<E: EquationOfState + ?Sized>(
     let p_clone = p;
     solve_outer(t_lo, t_hi, |tk| {
         let t = Temperature::new::<kelvin>(tk);
-        let r = flash_pt_impl(eos, db, nc, t, p_clone, z, crate::pt::PT_MAX_ITER, crate::pt::PT_TOL)?;
-        let res = mix_enthalpy(eos, t, &r)
-            .map_err(FlashError::Thermo)?;
+        let r = flash_pt_impl(
+            eos,
+            db,
+            nc,
+            t,
+            p_clone,
+            z,
+            crate::pt::PT_MAX_ITER,
+            crate::pt::PT_TOL,
+        )?;
+        let res = mix_enthalpy(eos, t, &r).map_err(FlashError::Thermo)?;
         Ok((res - target, r))
     })
 }
@@ -155,9 +177,17 @@ pub(crate) fn flash_pu_impl<E: EquationOfState + ?Sized>(
     let p_clone = p;
     solve_outer(t_lo, t_hi, |tk| {
         let t = Temperature::new::<kelvin>(tk);
-        let r = flash_pt_impl(eos, db, nc, t, p_clone, z, crate::pt::PT_MAX_ITER, crate::pt::PT_TOL)?;
-        let res = mix_internal_energy(eos, t, p_clone, &r)
-            .map_err(FlashError::Thermo)?;
+        let r = flash_pt_impl(
+            eos,
+            db,
+            nc,
+            t,
+            p_clone,
+            z,
+            crate::pt::PT_MAX_ITER,
+            crate::pt::PT_TOL,
+        )?;
+        let res = mix_internal_energy(eos, t, p_clone, &r).map_err(FlashError::Thermo)?;
         Ok((res - target, r))
     })
 }
@@ -182,7 +212,16 @@ pub(crate) fn flash_pv_impl<E: EquationOfState + ?Sized>(
     let p_clone = p;
     solve_outer(t_lo, t_hi, |tk| {
         let t = Temperature::new::<kelvin>(tk);
-        let r = flash_pt_impl(eos, db, nc, t, p_clone, z, crate::pt::PT_MAX_ITER, crate::pt::PT_TOL)?;
+        let r = flash_pt_impl(
+            eos,
+            db,
+            nc,
+            t,
+            p_clone,
+            z,
+            crate::pt::PT_MAX_ITER,
+            crate::pt::PT_TOL,
+        )?;
         Ok((mix_volume(&r) - target, r))
     })
 }
@@ -206,9 +245,17 @@ pub(crate) fn flash_ts_impl<E: EquationOfState + ?Sized>(
     let t_clone = t;
     solve_outer(p_lo, p_hi, |pk| {
         let p = Pressure::new::<uom::si::pressure::pascal>(pk);
-        let r = flash_pt_impl(eos, db, nc, t_clone, p, z, crate::pt::PT_MAX_ITER, crate::pt::PT_TOL)?;
-        let res = mix_entropy(eos, t_clone, &r)
-            .map_err(FlashError::Thermo)?;
+        let r = flash_pt_impl(
+            eos,
+            db,
+            nc,
+            t_clone,
+            p,
+            z,
+            crate::pt::PT_MAX_ITER,
+            crate::pt::PT_TOL,
+        )?;
+        let res = mix_entropy(eos, t_clone, &r).map_err(FlashError::Thermo)?;
         Ok((res - target, r))
     })
 }
@@ -232,7 +279,16 @@ pub(crate) fn flash_tv_impl<E: EquationOfState + ?Sized>(
     let t_clone = t;
     solve_outer(p_lo, p_hi, |pk| {
         let p = Pressure::new::<uom::si::pressure::pascal>(pk);
-        let r = flash_pt_impl(eos, db, nc, t_clone, p, z, crate::pt::PT_MAX_ITER, crate::pt::PT_TOL)?;
+        let r = flash_pt_impl(
+            eos,
+            db,
+            nc,
+            t_clone,
+            p,
+            z,
+            crate::pt::PT_MAX_ITER,
+            crate::pt::PT_TOL,
+        )?;
         Ok((mix_volume(&r) - target, r))
     })
 }

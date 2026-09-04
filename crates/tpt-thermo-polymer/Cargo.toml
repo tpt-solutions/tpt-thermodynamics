@@ -1,0 +1,24 @@
+[package]
+name = "tpt-thermo-polymer"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Polymer thermodynamics for tpt-thermodynamics: Flory-Huggins, Sanchez-Lacombe lattice-fluid EoS, PC-SAFT-for-polymers, cloud-point (UCST/LCST), molecular-weight distributions, and crystallization."
+
+[dependencies]
+tpt-thermo-core = { path = "../tpt-thermo-core" }
+tpt-thermo-eos-saft = { path = "../tpt-thermo-eos-saft" }
+uom = { workspace = true, default-features = false, features = ["si", "f32", "f64", "autoconvert"] }
+typenum = "1"
+
+[features]
+default = ["std"]
+std = []
+alloc = []
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true

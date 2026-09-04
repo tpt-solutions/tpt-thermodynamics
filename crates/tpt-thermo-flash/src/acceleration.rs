@@ -43,11 +43,7 @@ pub fn gdem_step(
     k_new: &[f64],
     mem: AccelerationMemory,
 ) -> (Vec<f64>, AccelerationMemory) {
-    let d_new: Vec<f64> = k_new
-        .iter()
-        .zip(k_old.iter())
-        .map(|(a, b)| a - b)
-        .collect();
+    let d_new: Vec<f64> = k_new.iter().zip(k_old.iter()).map(|(a, b)| a - b).collect();
 
     let (out, prev_d) = match mem.prev_d {
         Some(d_old) if norm2(&d_old) > 1e-30 => {

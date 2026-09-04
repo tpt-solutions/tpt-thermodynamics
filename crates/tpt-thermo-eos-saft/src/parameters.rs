@@ -40,6 +40,11 @@ pub struct SaftComponent {
     pub lambda_r: f64,
     /// For SAFT-VR Mie: attractive range `λ_a` (defaults to 6 for PC-SAFT).
     pub lambda_a: f64,
+    /// Ion charge number `z` (0 for neutral species). Carried here so the eSAFT
+    /// electrolyte extension can reuse the same parameter struct.
+    pub charge: i32,
+    /// Effective Born solvation radius in Ångström (0 for neutral species).
+    pub born_radius: f64,
 }
 
 impl SaftComponent {
@@ -53,6 +58,8 @@ impl SaftComponent {
             association: None,
             lambda_r: 12.0,
             lambda_a: 6.0,
+            charge: 0,
+            born_radius: 0.0,
         }
     }
 
@@ -78,7 +85,36 @@ impl SaftComponent {
             }),
             lambda_r: 12.0,
             lambda_a: 6.0,
+            charge: 0,
+            born_radius: 0.0,
         }
+    }
+
+    /// An ionic eSAFT component (charged segment with Born solvation radius).
+    pub const fn esaft_ion(
+        name: &'static str,
+        m: f64,
+        sigma: f64,
+        epsilon_k: f64,
+        charge: i32,
+        born_radius: f64,
+    ) -> Self {
+        Self {
+            name,
+            m,
+            sigma,
+            epsilon_k,
+            association: None,
+            lambda_r: 12.0,
+            lambda_a: 6.0,
+            charge,
+            born_radius,
+        }
+    }
+
+    /// Whether this component carries a charge.
+    pub fn is_ion(&self) -> bool {
+        self.charge != 0
     }
 }
 
@@ -183,6 +219,25 @@ pub const SEED_SAFT_PARAMETERS: &[SaftComponent] = &[
     SaftComponent::pc_saft("ethylene", 1.5505, 3.4453, 206.12),
     SaftComponent::pc_saft("propylene", 1.9169, 3.5357, 223.02),
     SaftComponent::pc_saft("hydrogen chloride", 1.5000, 3.4000, 250.00),
+];
+
+/// Seed eSAFT ion parameters for electrolyte mixtures.
+///
+/// Segment parameters are representative (order-of-magnitude) values sufficient
+/// for electrolyte phase-behaviour demos; the charge and Born radius are the
+/// physically-dominant quantities for the electrolyte terms. Full ion-parameter
+/// fitting against electrolyte data is tracked as a Deferred Scope follow-up.
+pub const SEED_E_SAFT_IONS: &[SaftComponent] = &[
+    // Sodium cation: small, strongly hydrated.
+    SaftComponent::esaft_ion("sodium", 1.0, 2.82, 150.0, 1, 1.7),
+    // Potassium cation: larger, less strongly hydrated than Na⁺.
+    SaftComponent::esaft_ion("potassium", 1.0, 3.30, 150.0, 1, 2.1),
+    // Calcium cation: divalent, strongly hydrated.
+    SaftComponent::esaft_ion("calcium", 1.0, 3.00, 150.0, 2, 2.0),
+    // Chloride anion: the reference anion for 1:1 salts.
+    SaftComponent::esaft_ion("chloride", 1.0, 3.60, 150.0, -1, 2.2),
+    // Sulfate anion: divalent, larger.
+    SaftComponent::esaft_ion("sulfate", 1.5, 4.00, 150.0, -2, 2.5),
 ];
 
 /// A held set of SAFT parameters for a mixture (one entry per component, in

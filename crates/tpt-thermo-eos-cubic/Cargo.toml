@@ -13,6 +13,7 @@ tpt-math-numeric = { workspace = true, default-features = false, features = ["al
 tpt-math-units = { workspace = true, default-features = false, features = ["alloc"] }
 uom = { workspace = true, default-features = false, features = ["si", "f32", "f64", "autoconvert"] }
 typenum = "1"
+spin = { workspace = true }
 
 [features]
 default = ["std"]

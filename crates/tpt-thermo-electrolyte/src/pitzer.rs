@@ -103,7 +103,10 @@ mod tests {
         let i = ionic_strength(m, 1.0, -1.0);
         let got = ln_mean_activity_coefficient(&p, m, 1.0, -1.0);
         let expected = f_gamma(i);
-        assert!((got - expected).abs() < 1e-15, "got {got}, expected {expected}");
+        assert!(
+            (got - expected).abs() < 1e-15,
+            "got {got}, expected {expected}"
+        );
         // Debye–Hückel limiting law: ln γ± → −A_γ·√I = −3·A_φ·√I as I → 0.
         assert!((got + 3.0 * A_PHI_25C * i.sqrt()).abs() < 1e-9);
         // Osmotic coefficient with no virial terms equals 1 + f^φ(I)·|z⁺z⁻|.
@@ -131,7 +134,10 @@ mod tests {
             let g = ln_mean_activity_coefficient(&p, m, 1.0, -1.0).exp();
             let phi = osmotic_coefficient(&p, m, 1.0, -1.0);
             assert!(g.is_finite() && g > 0.0, "γ± not finite/positive at m={m}");
-            assert!(phi.is_finite() && phi > 0.0, "φ not finite/positive at m={m}");
+            assert!(
+                phi.is_finite() && phi > 0.0,
+                "φ not finite/positive at m={m}"
+            );
         }
     }
 }
