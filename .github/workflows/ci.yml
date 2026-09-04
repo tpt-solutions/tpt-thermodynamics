@@ -15,8 +15,8 @@ jobs:
     name: rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@1.84
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.100
         with:
           components: rustfmt
       - run: cargo fmt --all --check
@@ -25,8 +25,8 @@ jobs:
     name: clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@1.84
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.100
         with:
           components: clippy
       - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
@@ -35,8 +35,8 @@ jobs:
     name: test + doctests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@1.84
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.100
       - uses: taiki-e/install-action@cargo-nextest
       - run: cargo nextest run --workspace --all-features
       - run: cargo test --workspace --all-features --doc
@@ -45,8 +45,8 @@ jobs:
     name: wasm build (wasm32-unknown-unknown)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@1.84
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.100
         with:
           targets: wasm32-unknown-unknown
       # `xtask` is a host-only binary and is excluded; library crates are
@@ -66,6 +66,6 @@ jobs:
     name: MSRV build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@1.84
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.100
       - run: cargo build --workspace --all-features
