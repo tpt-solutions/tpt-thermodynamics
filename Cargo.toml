@@ -32,7 +32,7 @@ repository = "https://github.com/tpt-solutions/tpt-thermodynamics"
 
 # Upstream substrate — consumed as crates.io version strings, matching how every
 # other tpt-* repo cross-depends (not path/git deps across repo boundaries).
-tpt-math-numeric = { version = "0.1.0", default-features = false }
+tpt-math-numeric = { version = "0.2.0", default-features = false }
 tpt-math-units = { version = "0.1.0", default-features = false }
 tpt-math-optimize-general = "0.1.0"
 tpt-math-optimize-convex = "0.1.0"
